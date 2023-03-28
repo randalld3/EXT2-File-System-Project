@@ -44,6 +44,9 @@ int ls_file(MINODE *mip, char *fname)
     char linkname[MAX];
     char *t1 = "xwrxwrxwr-------";
     char *t2 = "----------------";
+    if(mip){
+        printf("mip present\n");
+    }
 
     struct stat fstat, *sp;
     int r, i;
@@ -54,8 +57,8 @@ int ls_file(MINODE *mip, char *fname)
         printf("can't stat %s\n", fname);
         return;
     }
-    printf("ls_file: test 1\n");
-    
+
+    printf("mode: %x", mip->INODE.i_mode);
     if ((mip->INODE.i_mode & 0xF000) == 0x8000) // if (S_ISREG())
         printf("%c", '-');
     if ((mip->INODE.i_mode & 0xF000) == 0x4000) // if (S_ISDIR())
@@ -63,7 +66,7 @@ int ls_file(MINODE *mip, char *fname)
     if ((mip->INODE.i_mode & 0xF000) == 0xA000) // if (S_ISLNK())
         printf("%c", 'l');
         
-    printf("ls_file: test 2\n");
+    printf("ls_file: test 1\n");
     for (i = 8; i >= 0; i--)
     {
         if (mip->INODE.i_mode & (1 << i))
@@ -105,9 +108,8 @@ int ls_dir(MINODE *pip)
     while (cp < sbuf + BLKSIZE){
         strncpy(name, dp->name, dp->name_len);
         name[dp->name_len] = 0;
-        printf("%d\n", dp->name_len);
         printf("ls_dir: next file for ls = %s\n", name);
-
+        printf("getting: %d\n", dp->inode);
         mip = iget(dev, dp->inode); // get current file minode
         ls_file(mip, name);
         iput(mip);
@@ -160,4 +162,5 @@ rpwd(MINODE *wd)
     printf("/%s", myname);
 
 }
+
 
