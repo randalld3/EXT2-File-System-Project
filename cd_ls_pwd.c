@@ -25,40 +25,27 @@ extern int  requests, hits;
 
 int cd()
 {
-    printf("cd: Under Construction\n");
     MINODE* mip = path2inode(pathname);
+
     if (mip){
-        iput(running->cwd);
-        running->cwd = mip;
-        printf("chdir success\n");
-        return mip;
+        if ((mip->INODE.i_mode & 0xF000) == 0x4000){ // mip->INODE is a dir
+            iput(running->cwd);
+            running->cwd = mip;
+            return mip;
+        }
     }
     printf("Error: unable to locate dir\n");
     return 0;
-    // write YOUR code for cd
 }
 
 int ls_file(MINODE *mip, char *fname)
 {
-    printf("ls_file: under construction\n");
+    char ftime[64];
+    int i; 
     char linkname[MAX];
     char *t1 = "xwrxwrxwr-------";
     char *t2 = "----------------";
-    if(mip){
-        printf("mip present\n");
-    }
 
-    struct stat fstat, *sp;
-    int r, i;
-    char ftime[64];
-    sp = &fstat;
-    if ((r = lstat(fname, &fstat)) < 0)
-    {
-        printf("can't stat %s\n", fname);
-        return;
-    }
-
-    printf("mode: %x", mip->INODE.i_mode);
     if ((mip->INODE.i_mode & 0xF000) == 0x8000) // if (S_ISREG())
         printf("%c", '-');
     if ((mip->INODE.i_mode & 0xF000) == 0x4000) // if (S_ISDIR())
@@ -66,7 +53,6 @@ int ls_file(MINODE *mip, char *fname)
     if ((mip->INODE.i_mode & 0xF000) == 0xA000) // if (S_ISLNK())
         printf("%c", 'l');
         
-    printf("ls_file: test 1\n");
     for (i = 8; i >= 0; i--)
     {
         if (mip->INODE.i_mode & (1 << i))
@@ -79,10 +65,9 @@ int ls_file(MINODE *mip, char *fname)
     printf("%4d ", mip->INODE.i_uid);   // uid
     printf("%8ld ", mip->INODE.i_size);  // file size
 
-    strcpy(ftime, ctime(mip->INODE.i_mtime)); // print time in calendar form
+    strcpy(ftime, ctime(&mip->INODE.i_mtime)); // print time in calendar form
     ftime[strlen(ftime) - 1] = 0;        // kill \n at end
     printf("%s ", ftime);                
-    // print name
     printf("%s", fname); // print file basename
     // print -> linkname if symbolic file
     if ((mip->INODE.i_mode & 0xF000) == 0xA000){
@@ -108,8 +93,6 @@ int ls_dir(MINODE *pip)
     while (cp < sbuf + BLKSIZE){
         strncpy(name, dp->name, dp->name_len);
         name[dp->name_len] = 0;
-        printf("ls_dir: next file for ls = %s\n", name);
-        printf("getting: %d\n", dp->inode);
         mip = iget(dev, dp->inode); // get current file minode
         ls_file(mip, name);
         iput(mip);
@@ -135,6 +118,7 @@ int pwd()
         printf("/\n");
     else
         rpwd(wd);
+    putchar('\n');
 }
 
 rpwd(MINODE *wd)
@@ -146,21 +130,14 @@ rpwd(MINODE *wd)
     if (wd==root)
         return;
 
-
-
     parentino = findino(wd, &ino);
     pip = iget(dev, parentino);
 
     get_block(dev, wd->INODE.i_block[0], buf);
-
     findmyname(pip, ino, myname);
-
     rpwd(pip);
-
     iput(pip);
-
     printf("/%s", myname);
-
 }
 
 

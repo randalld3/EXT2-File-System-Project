@@ -38,6 +38,7 @@ int put_block(int dev, int blk, char buf[ ])
   return n; 
 }    
 
+//This whole function below is likely to get removed.
 int sort_list(){
   MINODE *mip;
   MINODE* mipArr[NMINODE];
@@ -117,7 +118,7 @@ MINODE *iget(int dev, int ino) // return minode pointer of (dev, ino)
   INODE *ip;
   int i, blk, offset;
   char buf[BLKSIZE];
-  printf("Entering iget()\n");
+  // printf("Entering iget()\n");
   // search in-memory minodes first
   for (i=0; i<NMINODE; i++){
     mip = &minode[i];
@@ -133,14 +134,14 @@ MINODE *iget(int dev, int ino) // return minode pointer of (dev, ino)
   if (freeList){    // unused minodes are available
     mip = freeList;         // remove minode[0] from freeList
     freeList = freeList->next;
-    if (mip){
-      printf("mip found\n");
-    }
+    // if (mip){
+    //   printf("mip found\n");
+    // }
     mip->next = cacheList;
     cacheList = mip;
-    if (mip->next){
-      printf("Cache already has nodes present\n");
-    }
+    // if (mip->next){
+    //   printf("Cache already has nodes present\n");
+    // }
 
     mip->cacheCount = mip->shareCount = 1; mip->modified = 0;
   
@@ -237,7 +238,7 @@ MINODE *path2inode(char *pathname)
   else
     mip = running->cwd;
 
-  tokenize(pathname);
+  n = tokenize(pathname);
   
   for (int i=0; i < n; i++){
 
