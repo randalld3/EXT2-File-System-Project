@@ -1,41 +1,44 @@
+// util.c
 #include "type.h"
 /*********** globals in main.c ***********/
-extern PROC   proc[NPROC];
-extern PROC   *running;
+extern PROC   proc[NPROC];   // process table
+extern PROC   *running;     // pointer to the currently running process
 
-extern MINODE minode[NMINODE];   // minodes
-extern MINODE *freeList;         // free minodes list
-extern MINODE *cacheList;        // cacheCount minodes list
+extern MINODE minode[NMINODE];   // In-memory Inodes structure array
+extern MINODE *freeList;         // List of free inodes
+extern MINODE *cacheList;        // List of inodes that are currently in use
 
-extern MINODE *root;
+extern MINODE *root; // Pointer to root directory inode
 
-extern OFT    oft[NOFT];
+extern OFT    oft[NOFT]; // Open File Table
 
 extern char gline[256];   // global line hold token strings of pathname
 extern char *name[64];    // token string pointers
 extern int  n;            // number of token strings                    
 
+// Variables for holding file system metadata
 extern int ninodes, nblocks;
 extern int bmap, imap, inodes_start, iblk;  // bitmap, inodes block numbers
 
+// Variables for file descriptor and command processing
 extern int  fd, dev;
 extern char cmd[16], pathname[128], parameter[128];
-extern int  requests, hits;
+extern int  requests, hits; // Variables for caching information
 
 /**************** util.c file **************/
 
-int get_block(int dev, int blk, char buf[ ])
+int get_block(int dev, int blk, char buf[ ]) // read a block of data from a device
 {
-  lseek(dev, blk*BLKSIZE, SEEK_SET);
-  int n = read(fd, buf, BLKSIZE);
-  return n;
+  lseek(dev, blk*BLKSIZE, SEEK_SET); // set the read/write position at the beginning of the block
+  int n = read(fd, buf, BLKSIZE); // read the block of data
+  return n;  // return the number of bytes read
 }
 
 int put_block(int dev, int blk, char buf[ ])
 {
-  lseek(dev, blk*BLKSIZE, SEEK_SET);
-  int n = write(fd, buf, BLKSIZE);
-  return n; 
+  lseek(dev, blk*BLKSIZE, SEEK_SET); // set the read/write position at the beginning of the block
+  int n = write(fd, buf, BLKSIZE); // write the block of data
+  return n;  // return the number of bytes written
 }    
 
 //This whole function below is likely to get removed.
@@ -77,20 +80,20 @@ int sort_list(){
 MINODE *mialloc() // allocate a FREE minode for use
 {
   int i;
-  for (i=0; i<NMINODE; i++){
+  for (i=0; i<NMINODE; i++){ // iterate over all minodes
     MINODE *mp = &minode[i];
-    if (mp->shareCount == 0){
-      mp->shareCount = 1;
+    if (mp->shareCount == 0){ // if shareCount is 0, the minode is free
+      mp->shareCount = 1; // set shareCount to 1 and return the minode
       return mp;
     }
   }
-  printf("FS panic: out of minodes\n");
+  printf("FS panic: out of minodes\n"); // if no free minodes, print an error message and return 0
   return 0;
 }
 
 int midalloc(MINODE *mip) // release a used minode
 {
-  mip->shareCount = 0;
+  mip->shareCount = 0;  // set shareCount to 0 to release the minode
 }
 
 int tokenize(char *pathname) // Takes a pathname and tokenizes it into an array of names
@@ -112,51 +115,102 @@ int tokenize(char *pathname) // Takes a pathname and tokenizes it into an array 
   return n; // return number of names
 }
 
+MINODE *enqueue(MINODE **list, MINODE *mip)
+{
+  MINODE *m = *list;
+  printf("mip ino = %d\n", mip->ino);
+  while(m){
+    printf("TESTING\n");
+    if (m == mip)
+      return 0;
+    
+    m = m->next; // It is breaking on this line. m should equal 0 on the first
+                 // pass, but it is not evaluating as such. 
+    printf("TESTING 2\n");
+  }
+printf("ENQUEUE1\n");
+  m = *list;
+  if (m == 0 || mip->cacheCount < m->cacheCount){
+    mip->next = *list;
+    *list = mip;
+    return mip;
+  }
+  printf("ENQUEUE2\n");
+  while (m->next && mip->cacheCount >= m->next->cacheCount)
+    m = m->next;
+  mip->next = m->next;
+  m->next = mip;
+  return mip;
+}
+
+MINODE *dequeue(MINODE **list)
+{
+  MINODE *mip = list;
+  if (mip)
+    *list = (*list)->next;
+
+  return mip;
+}
+
 MINODE *iget(int dev, int ino) // return minode pointer of (dev, ino)
 {
-  MINODE *mip;
+  MINODE *mip = cacheList;
   INODE *ip;
   int i, blk, offset;
   char buf[BLKSIZE];
+
+printf("ENTERING IGET1\n");
+    while(mip){
+      if (mip->dev == dev && mip->ino == ino){
+      //printf("found minode %d [%d %d] in cache\n", mip->id, dev, ino);
+        mip->cacheCount++;
+        mip->shareCount++;
+        return mip;
+      }
+      mip = mip->next;
+    }
+
   // printf("Entering iget()\n");
   // search in-memory minodes first
-  for (i=0; i<NMINODE; i++){
-    mip = &minode[i];
-    if ((mip->dev==dev) && (mip->ino==ino)){ 
-      printf("found minode %d [%d %d] in cache\n", mip->id, dev, ino);
-      mip->cacheCount++;
-      mip->shareCount++;
-      return mip;
-    }
-  }
-
+  // for (i=0; i<NMINODE; i++){
+  //   mip = &minode[i];
+  //   if ((mip->dev==dev) && (mip->ino==ino)){ 
+  //     printf("found minode %d [%d %d] in cache\n", mip->id, dev, ino);
+  //     mip->cacheCount++;
+  //     mip->shareCount++;
+  //     return mip;
+  //   }
+// }
+  mip = dequeue(&freeList);
   // needed (dev, ino) NOT in cacheList
-  if (freeList){    // unused minodes are available
-    mip = freeList;         // remove minode[0] from freeList
-    freeList = freeList->next;
+  if (mip){    // unused minodes are available
+
+    // mip = freeList;         // remove minode[0] from freeList
+    // freeList = freeList->next;
     // if (mip){
     //   printf("mip found\n");
     // }
-    mip->next = cacheList;
-    cacheList = mip;
+    // mip->next = cacheList;
+    // cacheList = mip;
     // if (mip->next){
     //   printf("Cache already has nodes present\n");
     // }
 
     mip->cacheCount = mip->shareCount = 1; mip->modified = 0;
-  
     mip->dev = dev; mip->ino = ino; // assign to (dev, ino)
     blk = (ino-1) / 8 + iblk; // disk block containing this inode
     offset= (ino-1) % 8; // which inode in this block
-
     get_block(dev, blk, buf);
     ip = (INODE*)buf + offset;
+
     mip->INODE = *ip;
+    enqueue(&cacheList, mip);
 
     return mip;
   }
   else{ 
-    sort_list; // start by reordering cachelist
+    
+    // sort_list; // start by reordering cachelist
     mip = cacheList;
     while(mip->shareCount != 0) // find minode from cacheList with sharecount=0 and smallest cacheCount
       mip = mip->next;
@@ -172,30 +226,31 @@ int iput(MINODE *mip)  // release a mip
   int i, block, offset;
   char buf[BLKSIZE];
 
-  if (mip==0) return;
+  if (mip==0) return; // if mip is null, return
   
-  mip->shareCount--;         // one less user on this minode
+  mip->shareCount--;         // decrement shareCount to release the minode
 
-  if (mip->shareCount > 0)   return;
-  if (!mip->modified)        return;
+  if (mip->shareCount > 0)   return; // if there are still users of the minode, return
+  if (!mip->modified)        return; // if the minode has not been modified, return
      
+  // calculate the block and offset of the minode's inode
   block = (mip->ino - 1) / 8 + mip->INODE.i_block;
   offset = (mip->ino - 1) % 8;
 
   // get block containing this inode
   get_block(mip->dev, block, buf);
-  ip = (INODE *)buf + offset; // ip points at INODE
+  ip = (INODE *)buf + offset; // set ip to point to the inode
 
-  *ip = mip->INODE; // copy INODE to inode in block
-  put_block(mip->dev, block, buf); // write back to disk
-  midalloc(mip); // mip->refCount = 0;
+  *ip = mip->INODE; // copy the minode's INODE to the inode in the block
+  put_block(mip->dev, block, buf); // write block back to disk
+  midalloc(mip); // mip->refCount = 0; release the minode
 
-  return(0);
+  return(0); // return success
 
  
   // last user, INODE modified: MUST write back to disk
-    //Use Mailman's algorithm to write minode.INODE back to disk)
-    // NOTE: minode still in cacheList;
+  //Use Mailman's algorithm to write minode.INODE back to disk)
+  // NOTE: minode still in cacheList;
 
 } 
 
@@ -233,28 +288,28 @@ MINODE *path2inode(char *pathname)
 {
   MINODE *mip;
 
-  if (pathname[0] == '/')
+  if (pathname[0] == '/') // If pathname starts with '/', set mip to root
     mip = root;
-  else
+  else // Otherwise, set mip to the current working directory of the running process
     mip = running->cwd;
 
-  n = tokenize(pathname);
+  n = tokenize(pathname); // Tokenize the pathname and store the number of tokens in n
   
-  for (int i=0; i < n; i++){
+  for (int i=0; i < n; i++){ // For each token in the pathname
 
-    if (!S_ISDIR(mip->INODE.i_mode)){
-      printf("Error: %s not a directory\n", name[i]);
+    if (!S_ISDIR(mip->INODE.i_mode)){ // If the current MINODE is not a directory
+      printf("Error: %s not a directory\n", name[i]); // Print error message and return 0
       return 0;
     }
-    int ino = search(mip, name[i]);
+    int ino = search(mip, name[i]); // Search for the directory entry matching the current token in the current directory
     if (ino==0)
       return 0;
 
     iput(mip);             // release current mip
     mip = iget(dev, ino);  // change to new mip of (dev, ino)
   }
-  return mip;
 
+  return mip; // Return the final MINOD
 }   
 
 int findmyname(MINODE *pip, int myino, char myname[ ]) 
@@ -294,15 +349,15 @@ int findino(MINODE *mip, int *myino)
 
   // ASSUME only one data block i_block[0]
   // YOU SHOULD print i_block[0] number to see its value
-  get_block(dev, mip->INODE.i_block[0], sbuf);
+  get_block(dev, mip->INODE.i_block[0], sbuf); // Read in the first data block of the inode into sbuf
 
   dp = (DIR *)sbuf; // set the directory entry pointer to the start of sbuf
   cp = sbuf; // set the character pointer to the start of sbuf
 
-  *myino = dp->inode;
-  cp += dp->rec_len;
-  dp = (DIR *)cp;
+  *myino = dp->inode; // Get the inode number of the first directory entry and store it in myino
+  cp += dp->rec_len; // Advance the character pointer by the length of the directory entry
+  dp = (DIR *)cp; // Set the directory entry pointer to the next directory entry
 
-  return dp->inode;
+  return dp->inode; // Return the inode number of the second directory entry
 
 }

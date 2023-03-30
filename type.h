@@ -1,3 +1,4 @@
+// type.h
 #ifndef TYPE_H
 #define TYPE_H
 /***** type.h file for CS360 Project *****/
@@ -18,13 +19,13 @@ typedef struct ext2_group_desc  GD;
 typedef struct ext2_inode       INODE;
 typedef struct ext2_dir_entry_2 DIR; 
 
-#define BLKSIZE           1024
-#define MAX                256 
+#define BLKSIZE           1024   // size of a block in bytes
+#define MAX                256   // maximum length of a pathname
 
-#define NPROC                2
-#define NMINODE             64
-#define NFD                  8
-#define NOFT                32
+#define NPROC                2   // maximum number of running processes
+#define NMINODE             64   // maximum number of inodes
+#define NFD                  8   // maximum number of open files per process
+#define NOFT                32   // maximum number of open files in system
 
 // In-memory inodes structure
 typedef struct minode{		
@@ -38,22 +39,21 @@ typedef struct minode{
 
 }MINODE;
 
-// Open File Table
+// Open File Table structure
 typedef struct oft{
-  int   mode;
-  int   shareCount;
-  struct minode *inodeptr;
-  long  offset;
+  int   mode;                  // file open mode (read, write, append, etc.)
+  int   shareCount;            // number of processes sharing this OFT
+  struct minode *inodeptr;     // pointer to the inode of the opened file
+  long  offset;                // current position within the file
 } OFT;
-
 
 // PROC structure
 typedef struct proc{
-  int   uid;            // uid = 0 or nonzero
-  int   gid;            // group ID = uid
-  int   pid;            // pid = 1 or 2
-  struct minode *cwd;   // CWD pointer
-  OFT   *fd[NFD];       // file descriptor array
+  int   uid;                   // user ID of the process (0 or nonzero)
+  int   gid;                   // group ID of the process (same as uid)
+  int   pid;                   // process ID (1 or 2)
+  struct minode *cwd;          // pointer to the current working directory of the process
+  OFT   *fd[NFD];              // array of file descriptors for the process
 } PROC;
-      
+
 #endif
