@@ -117,25 +117,23 @@ int tokenize(char *pathname) // Takes a pathname and tokenizes it into an array 
 
 MINODE *enqueue(MINODE **list, MINODE *mip)
 {
+  //*list = 0;
   MINODE *m = *list;
   printf("mip ino = %d\n", mip->ino);
+  
   while(m){
-    printf("TESTING\n");
     if (m == mip)
       return 0;
-    
-    m = m->next; // It is breaking on this line. m should equal 0 on the first
-                 // pass, but it is not evaluating as such. 
-    printf("TESTING 2\n");
+    m = m->next; 
   }
-printf("ENQUEUE1\n");
+
   m = *list;
   if (m == 0 || mip->cacheCount < m->cacheCount){
     mip->next = *list;
     *list = mip;
     return mip;
   }
-  printf("ENQUEUE2\n");
+
   while (m->next && mip->cacheCount >= m->next->cacheCount)
     m = m->next;
   mip->next = m->next;
@@ -145,7 +143,7 @@ printf("ENQUEUE1\n");
 
 MINODE *dequeue(MINODE **list)
 {
-  MINODE *mip = list;
+  MINODE *mip = *list;
   if (mip)
     *list = (*list)->next;
 
@@ -159,7 +157,6 @@ MINODE *iget(int dev, int ino) // return minode pointer of (dev, ino)
   int i, blk, offset;
   char buf[BLKSIZE];
 
-printf("ENTERING IGET1\n");
     while(mip){
       if (mip->dev == dev && mip->ino == ino){
       //printf("found minode %d [%d %d] in cache\n", mip->id, dev, ino);
@@ -170,42 +167,19 @@ printf("ENTERING IGET1\n");
       mip = mip->next;
     }
 
-  // printf("Entering iget()\n");
-  // search in-memory minodes first
-  // for (i=0; i<NMINODE; i++){
-  //   mip = &minode[i];
-  //   if ((mip->dev==dev) && (mip->ino==ino)){ 
-  //     printf("found minode %d [%d %d] in cache\n", mip->id, dev, ino);
-  //     mip->cacheCount++;
-  //     mip->shareCount++;
-  //     return mip;
-  //   }
-// }
   mip = dequeue(&freeList);
-  // needed (dev, ino) NOT in cacheList
   if (mip){    // unused minodes are available
-
-    // mip = freeList;         // remove minode[0] from freeList
-    // freeList = freeList->next;
-    // if (mip){
-    //   printf("mip found\n");
-    // }
-    // mip->next = cacheList;
-    // cacheList = mip;
-    // if (mip->next){
-    //   printf("Cache already has nodes present\n");
-    // }
-
     mip->cacheCount = mip->shareCount = 1; mip->modified = 0;
     mip->dev = dev; mip->ino = ino; // assign to (dev, ino)
+
     blk = (ino-1) / 8 + iblk; // disk block containing this inode
     offset= (ino-1) % 8; // which inode in this block
     get_block(dev, blk, buf);
+
     ip = (INODE*)buf + offset;
-
     mip->INODE = *ip;
-    enqueue(&cacheList, mip);
 
+    enqueue(&cacheList, mip);
     return mip;
   }
   else{ 
@@ -219,6 +193,7 @@ printf("ENTERING IGET1\n");
     return mip;
   }
 }
+
 
 int iput(MINODE *mip)  // release a mip
 {

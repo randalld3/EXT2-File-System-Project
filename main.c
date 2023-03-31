@@ -97,7 +97,7 @@ int main(int argc, char *argv[ ])
   bmap = gp->bg_block_bitmap;  // set bmap to the value of the block bitmap block number
   imap = gp->bg_inode_bitmap;  // set imap to the value of the inode bitmap block number
   iblk = inodes_start = gp->bg_inode_table;  // set iblk and inodes_start to the value of the inode table block number
-
+  
   printf("bmap=%d  imap=%d  iblk=%d\n", bmap, imap, iblk);  // print block numbers of bitmaps and inode table
   root = iget(dev, 2);  // get the inode of the root directory (inode number 2)
   running->cwd = root;  // set the current working directory of the running process to root
@@ -106,7 +106,7 @@ int main(int argc, char *argv[ ])
     printf("P%d running\n", running->pid); // print the process ID of the running process
     pathname[0] = parameter[0] = 0; // initialize the input strings to empty
       
-    printf("enter command [cd|ls|pwd|exit] : "); // prompt the user to enter a command
+    printf("enter command [cd|ls|pwd|show|hits|exit] : "); // prompt the user to enter a command
     fgets(line, 128, stdin); // read a line from the user
     line[strlen(line)-1] = 0;    // remove the newline character from the end of the line
 
@@ -154,20 +154,51 @@ int show_dir(MINODE *mip)  // show contents of mip DIR: same as in LAB5
 
     cp += dp->rec_len;      // advance cp by rec_len
     dp = (DIR *)cp;         // pull dp to cp
-   }
+  }
 
 }
 
 int hit_ratio()
 {
+  MINODE *mip = running->cwd;
+  int n = 0, parentIno, ino;
+  char buf[BLKSIZE];
+  int iArr[MAX];
 
+  while(1){
+    mip->cacheCount--;
+    parentIno = findino(mip, &ino);
+    iArr[n++] = mip->ino;
+    mip = iget(dev, parentIno);
+    iput(mip);
+    if (mip == root)
+      break;
+  }
+  iArr[n++] = root->ino;
+  
+  mip = cacheList;
+  hits = requests = 0;
+  printf("cacheList=");
+  while(mip){
+    printf("c%d[%d %d]s%d->", mip->cacheCount, mip->dev, mip->ino, mip->shareCount);
+    for(int i = 0; i < n; i++){
+      if (mip->ino == iArr[i]){
+        hits +=mip->cacheCount;
+        break;
+      }
+    }
+    requests +=mip->cacheCount;
+    mip = mip->next;
+  }
+  printf("NULL\n");
+  printf("requests=%d hits=%d hit_ratio=%d%%\n", requests, hits, (100 * hits) / requests);
 }
 
 int quit()
 {
    MINODE *mip = cacheList;   // Start at the beginning of the cacheList
    
-   while(mip){   // Traverse the cacheList
+   while(mip != 0){   // Traverse the cacheList
      if (mip->shareCount){  // If the MINODE has been shared but not modified, write it back to disk
         mip->shareCount = 1;
         iput(mip); // write INODE back if modified
