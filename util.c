@@ -119,7 +119,6 @@ MINODE *enqueue(MINODE **list, MINODE *mip)
 {
   //*list = 0;
   MINODE *m = *list;
-  printf("mip ino = %d\n", mip->ino);
   
   while(m){
     if (m == mip)

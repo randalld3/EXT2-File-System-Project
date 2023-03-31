@@ -32,13 +32,14 @@ int cd()
 
     if (mip){
         if ((mip->INODE.i_mode & 0xF000) == 0x4000){ // checks if the MINODE is a directory
+            printf("cd to [dev ino]=[%d %d]\n", mip->dev, mip->ino);
             iput(running->cwd); // releases the current working directory MINODE
             running->cwd = mip; // sets the current working directory to the new directory
+            printf("after cd : cwd = [%d %d]\n", running->cwd->dev, running->cwd->ino);
             return mip;
         }
     }
-
-    printf("Error: unable to locate dir\n"); // if directory not found
+    printf("%s not a directory\n", pathname); // if directory not found
     return 0;
 }
 
@@ -74,13 +75,15 @@ int ls_file(MINODE *mip, char *fname)
     strcpy(ftime, ctime(&mip->INODE.i_mtime)); // print time in calendar form
     ftime[strlen(ftime) - 1] = 0;        // kill \n at end
     printf("%s ", ftime);                
-    printf("%s", fname); // print file basename
+    printf("%s ", fname); // print file basename
 
     // print -> linkname of symbolic file
     if ((mip->INODE.i_mode & 0xF000) == 0xA000){ // is linked
         readlink(fname, linkname, MAX);  // use readlink() to read linkname
         printf(" -> %s", linkname); // print linked name 
     }
+
+    printf("[%d %d]", mip->dev, mip->ino);
     putchar('\n');
 }
 

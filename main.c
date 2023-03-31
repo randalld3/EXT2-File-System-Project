@@ -80,7 +80,7 @@ int main(int argc, char *argv[ ])
   get_block(dev, 1, buf); // read block 1 from disk into buf
   SUPER *sp = (SUPER *)buf;  // cast buf as a SUPER struct pointer to access the super block
 
-  printf("s_magic=%x  ", sp->s_magic);
+  printf("check: superblock magic=%x  ", sp->s_magic);
   if (sp->s_magic != 0xEF53){ // check if it's an EXT2 file system by verifying its magic number
       printf("magic = %x it's not an ext2 file system\n", sp->s_magic); // Not ext2 system
       exit(1);
@@ -101,6 +101,7 @@ int main(int argc, char *argv[ ])
   printf("bmap=%d  imap=%d  iblk=%d\n", bmap, imap, iblk);  // print block numbers of bitmaps and inode table
   root = iget(dev, 2);  // get the inode of the root directory (inode number 2)
   running->cwd = root;  // set the current working directory of the running process to root
+  printf("creating P%d as running process\n", running->pid);
 
   while(1){
     printf("P%d running\n", running->pid); // print the process ID of the running process
@@ -145,17 +146,16 @@ int show_dir(MINODE *mip)  // show contents of mip DIR: same as in LAB5
 
   dp = (DIR *)sbuf; // set dp to point to the first directory entry in the block
   cp = sbuf; // set the character pointer to the start of sbuf
+  printf("   i_number rec_len name_len   name\n");
 
   while(cp < sbuf + BLKSIZE){ // loop through all directory entries in the block
     strncpy(temp, dp->name, dp->name_len); // copy the directory name into temp
     temp[dp->name_len] = 0;  // convert dp->name into a string  
-
     printf("%8d%8d%8u       %s\n", dp->inode, dp->rec_len, dp->name_len, temp);
 
     cp += dp->rec_len;      // advance cp by rec_len
     dp = (DIR *)cp;         // pull dp to cp
   }
-
 }
 
 int hit_ratio()
