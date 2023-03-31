@@ -41,42 +41,6 @@ int put_block(int dev, int blk, char buf[ ])
   return n;  // return the number of bytes written
 }    
 
-//This whole function below is likely to get removed.
-int sort_list(){
-  MINODE *mip;
-  MINODE* mipArr[NMINODE];
-  int i, n = 0;
-  mip = cacheList;
-
-  if (!mip)
-    return(0);
-
-  printf("Resorting cacheList...\n");
-  while (mip){
-    mipArr[n] = mip;
-    mip = mip->next;
-    n++;
-  }
-
-  for(i = 0; i < n - 1; i++){ //Bubblesort used razor leaf!
-    for (int j = 0; j < n - i - 1; j++){
-      if (mipArr[j]->cacheCount > mipArr[j + 1]->cacheCount){
-        mip = mipArr[j];
-        mipArr[j] = mipArr[j+1];
-        mipArr[j+1] = mip;
-      }
-    }
-  }
-  cacheList = mip = mipArr[0];
-
-  for(i = 1; i < n && mip; i++)
-  {
-    mip->next = mipArr[i];
-    mip = mip->next;
-  }
-  printf("cacheList resorted\n");
-}
-
 MINODE *mialloc() // allocate a FREE minode for use
 {
   int i;
@@ -117,48 +81,45 @@ int tokenize(char *pathname) // Takes a pathname and tokenizes it into an array 
 
 MINODE *enqueue(MINODE **list, MINODE *mip)
 {
-  //*list = 0;
   MINODE *m = *list;
   
-  while(m){
-    if (m == mip)
+  while(m){ // Traverse entire list
+    if (m == mip) // If exists, return 0
       return 0;
     m = m->next; 
   }
 
-  m = *list;
-  if (m == 0 || mip->cacheCount < m->cacheCount){
-    mip->next = *list;
+  m = *list; // Set m back to the first node of the list
+  if (m == 0 || mip->cacheCount < m->cacheCount){ // If the list is empty or mip has a lower cache count than the first node
+    mip->next = *list; // Set mip to be the new head of the list
     *list = mip;
     return mip;
   }
 
-  while (m->next && mip->cacheCount >= m->next->cacheCount)
+  while (m->next && mip->cacheCount >= m->next->cacheCount) // Iterate through the list until you find a node with a lower cache count
     m = m->next;
-  mip->next = m->next;
+  mip->next = m->next; // Insert the new node before the node with a lower cache count
   m->next = mip;
   return mip;
 }
 
 MINODE *dequeue(MINODE **list)
 {
-  MINODE *mip = *list;
+  MINODE *mip = *list; // Set mip to the first node of the list
   if (mip)
-    *list = (*list)->next;
-
-  return mip;
+    *list = (*list)->next; // Set the head of the list to the next node
+  return mip; // Return the dequeued node
 }
 
 MINODE *iget(int dev, int ino) // return minode pointer of (dev, ino)
 {
-  MINODE *mip = cacheList;
+  MINODE *mip = cacheList; // Set mip to the first node of the cacheList
   INODE *ip;
   int i, blk, offset;
   char buf[BLKSIZE];
 
-    while(mip){
-      if (mip->dev == dev && mip->ino == ino){
-      //printf("found minode %d [%d %d] in cache\n", mip->id, dev, ino);
+    while(mip){ // Iterate through the linked list
+      if (mip->dev == dev && mip->ino == ino){ // If the inode is already in the cacheList, update counts and return the node
         mip->cacheCount++;
         mip->shareCount++;
         return mip;
@@ -166,7 +127,7 @@ MINODE *iget(int dev, int ino) // return minode pointer of (dev, ino)
       mip = mip->next;
     }
 
-  mip = dequeue(&freeList);
+  mip = dequeue(&freeList); // Get an unused minode from the freeList
   if (mip){    // unused minodes are available
     mip->cacheCount = mip->shareCount = 1; mip->modified = 0;
     mip->dev = dev; mip->ino = ino; // assign to (dev, ino)
@@ -178,12 +139,10 @@ MINODE *iget(int dev, int ino) // return minode pointer of (dev, ino)
     ip = (INODE*)buf + offset;
     mip->INODE = *ip;
 
-    enqueue(&cacheList, mip);
+    enqueue(&cacheList, mip); // Add the new minode to the cacheList
     return mip;
   }
   else{ 
-    
-    // sort_list; // start by reordering cachelist
     mip = cacheList;
     while(mip->shareCount != 0) // find minode from cacheList with sharecount=0 and smallest cacheCount
       mip = mip->next;
@@ -192,7 +151,6 @@ MINODE *iget(int dev, int ino) // return minode pointer of (dev, ino)
     return mip;
   }
 }
-
 
 int iput(MINODE *mip)  // release a mip
 {

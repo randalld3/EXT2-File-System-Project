@@ -160,34 +160,34 @@ int show_dir(MINODE *mip)  // show contents of mip DIR: same as in LAB5
 
 int hit_ratio()
 {
-  MINODE *mip = running->cwd;
+  MINODE *mip = running->cwd; // Get the current working directory MINODE
   int n = 0, parentIno, ino;
   char buf[BLKSIZE];
   int iArr[MAX];
 
-  while(1){
+  while(1){ // Traverse up the directory tree, recording the inodes in iArr
     mip->cacheCount--;
-    parentIno = findino(mip, &ino);
+    parentIno = findino(mip, &ino); // Find the inode number and parent inode number of the current MINODE
     iArr[n++] = mip->ino;
-    mip = iget(dev, parentIno);
-    iput(mip);
-    if (mip == root)
+    mip = iget(dev, parentIno); // Get the MINODE of the parent directory
+    iput(mip); // Release the current MINODE
+    if (mip == root) // If the current MINODE is the root directory, break
       break;
   }
-  iArr[n++] = root->ino;
+  iArr[n++] = root->ino; // Add the inode number of the root directory to iArr
   
   mip = cacheList;
   hits = requests = 0;
   printf("cacheList=");
   while(mip){
     printf("c%d[%d %d]s%d->", mip->cacheCount, mip->dev, mip->ino, mip->shareCount);
-    for(int i = 0; i < n; i++){
-      if (mip->ino == iArr[i]){
+    for(int i = 0; i < n; i++){ // Check if the current MINODE's inode number is in iArr
+      if (mip->ino == iArr[i]){ // If it is, add the current MINODE's cache count to hits
         hits +=mip->cacheCount;
         break;
       }
     }
-    requests +=mip->cacheCount;
+    requests +=mip->cacheCount; // Add the current MINODE's cache count to requests
     mip = mip->next;
   }
   printf("NULL\n");
