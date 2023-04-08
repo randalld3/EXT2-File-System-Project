@@ -1,4 +1,4 @@
-//mkdir_rmdir_creat.c
+//mkdir_creat.c
 #include "type.h"
 /*********** globals in main.c ***********/
 extern PROC   proc[NPROC];   // process table
@@ -32,7 +32,7 @@ int make_dir()
     MINODE *mip, *pip;
     char buf[BLKSIZE];
 
-    if (!pathname){
+    if (!pathname[0]){
         printf("error : no pathname specified\n");
         return -1;
     }
@@ -50,7 +50,6 @@ int make_dir()
 
     parentp = dirname(parent);
     childp = basename(child);
-    printf("pathname=%s\ndirname=%s\nbasename=%s\n", pathname, parentp, childp);
 
     pip = path2inode(parent);
     

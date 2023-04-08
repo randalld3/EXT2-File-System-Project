@@ -70,7 +70,6 @@ int tokenize(char *pathname) // Takes a pathname and tokenizes it into an array 
 {
     int i, n = 0;
     char *s;
-    printf("tokenize %s\n", pathname); // print what is being tokenized
 
     strcpy(gline, pathname); // copy pathname into global variable gpath
 
@@ -209,10 +208,7 @@ int search(MINODE *mip, char *name)
         strncpy(temp, dp->name, dp->name_len); // copy the name from the directory entry to temp
         temp[dp->name_len] = 0;  // convert dp->name into a string
 
-        printf("%8d%8d%8u       %s\n", dp->inode, dp->rec_len, dp->name_len, temp);
-
         if (!strcmp(temp, name)){
-            printf("found %s : ino = %d\n", dp->name, dp->inode); // print message indicating target found
             return dp->inode;
         }
         cp += dp->rec_len;      // advance cp by rec_len

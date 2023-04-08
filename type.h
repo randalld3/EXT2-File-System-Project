@@ -28,6 +28,7 @@ typedef struct ext2_dir_entry_2 DIR;
 #define NOFT                32   // maximum number of open files in system
 #define DMODE           0x41ED   // constant INODE.s_mode == dir
 #define RMODE           0x81A4   // constant INODE.s_mode == reg
+#define LMODE           0xA1FF   // constant INODE.s_mode == lnk
 
 // In-memory inodes structure
 typedef struct minode{		

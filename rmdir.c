@@ -1,4 +1,4 @@
-//mkdir_rmdir_creat.c
+//rmdir.c
 #include "type.h"
 /*********** globals in main.c ***********/
 extern PROC   proc[NPROC];   // process table
@@ -34,7 +34,7 @@ int rmdir()
     int pino;
     char child[128];
 
-    if (!pathname){
+    if (!pathname[0]){
         printf("error : no pathname specified\n");
         return -1;
     }
@@ -51,6 +51,10 @@ int rmdir()
     childp = basename(child);
     mip = path2inode(pathname);
 
+    if (!mip){
+        printf("error : ino at %s not found\n", pathname);
+        return -1;
+    }
     if (!S_ISDIR(mip->INODE.i_mode)){
         printf("cannot rmdir : %s is not dir\n", pathname);
         iput(mip);
@@ -61,6 +65,7 @@ int rmdir()
         iput(mip);
         return -1;
     }
+        
     get_block(dev, mip->INODE.i_block[0], buf);
     dp = (DIR *)buf;
     cp = buf;
@@ -96,7 +101,6 @@ int rm_child(MINODE *parent, char *name)
     DIR *prev, *dp;
     char *cp;
     char temp[128], buf[BLKSIZE];
-
     for(int i = 0; i < 12; i++){
         if (parent->INODE.i_block[i] == 0)
             break;
@@ -108,6 +112,7 @@ int rm_child(MINODE *parent, char *name)
         while (cp < buf + BLKSIZE){
             strncpy(temp, dp->name, dp->name_len);
             temp[dp->name_len] = 0;
+
             if (strcmp(temp, name)==0){
                 if (prev){
                     dp->inode = 0;
@@ -117,7 +122,7 @@ int rm_child(MINODE *parent, char *name)
                 else if (cp == buf && dp->rec_len == BLKSIZE){
                     bdalloc(dev, parent->INODE.i_block[i]);
                     parent->INODE.i_size -= BLKSIZE;
-                    
+
                     while(parent->INODE.i_block[i+1] != 0 && i+1 < 12){
                         get_block(dev, parent->INODE.i_block[++i], buf);
                         put_block(dev, parent->INODE.i_block[i-1], buf);

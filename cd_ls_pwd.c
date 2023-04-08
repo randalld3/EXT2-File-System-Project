@@ -78,10 +78,9 @@ int ls_file(MINODE *mip, char *fname)
     ftime[strlen(ftime) - 1] = 0;        // kill \n at end
     printf("%s ", ftime);                
     printf("%s ", fname); // print file basename
-
     // print -> linkname of symbolic file
     if ((mip->INODE.i_mode & 0xF000) == 0xA000){ // is linked
-        readlink(fname, linkname, MAX);  // use readlink() to read linkname
+        readlink(fname, linkname);  // use readlink() to read linkname
         printf(" -> %s", linkname); // print linked name 
     }
 
@@ -115,8 +114,6 @@ int ls_dir(MINODE *pip)
         cp += dp->rec_len;
         dp = (DIR *)cp;
     }
-
-    putchar('\n');    // Print a newline character to separate the directory listings
 }
 
 int ls()

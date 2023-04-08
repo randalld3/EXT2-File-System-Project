@@ -31,6 +31,7 @@ int  requests, hits;
 #include "cd_ls_pwd.c"
 #include "rmdir.c"
 #include "mkdir_creat.c"
+#include "link_unlink.c"
 
 int init()
 {
@@ -113,9 +114,11 @@ int main(int argc, char *argv[ ])
     while(1){
         printf("P%d running\n", running->pid); // print the process ID of the running process
         pathname[0] = parameter[0] = 0; // initialize the input strings to empty
-        bzero(absPath, 128);
+        bzero(absPath, sizeof(absPath));
+        bzero(pathname, sizeof(pathname));
+        bzero(parameter, sizeof(parameter));
 
-        printf("enter command [cd|ls|pwd|mkdir|creat|rmdir |show|hits|exit] : "); // prompt the user to enter a command
+        printf("enter command [cd|ls|pwd|mkdir|creat|rmdir|link|unlink|symlink |show|hits|exit] : "); // prompt the user to enter a command
         fgets(line, 128, stdin); // read a line from the user
         line[strlen(line)-1] = 0;    // remove the newline character from the end of the line
 
@@ -123,7 +126,6 @@ int main(int argc, char *argv[ ])
             continue; // if the user enters nothing, continue prompting for a command
       
         sscanf(line, "%s %s %64c", cmd, pathname, parameter); // parse the command, pathname, and parameter from the input line
-        printf("pathname=%s parameter=%s\n", pathname, parameter);
       
         if (strcmp(cmd, "ls")==0) // list files
             ls();
@@ -146,6 +148,13 @@ int main(int argc, char *argv[ ])
             creat_file();
         if (strcmp(cmd, "rmdir")==0)
             rmdir();
+
+        if (strcmp(cmd, "link")==0)
+            link();
+        if (strcmp(cmd, "unlink")==0)
+            unlink();
+        if (strcmp(cmd, "symlink")==0)
+            symlink();
     }
 }
 
