@@ -1,5 +1,5 @@
-rm a.out
 rm diskimage
-cp copydisk diskimage
+mkdisk
+rm a.out
 cc main.c
 a.out

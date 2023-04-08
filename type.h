@@ -26,34 +26,36 @@ typedef struct ext2_dir_entry_2 DIR;
 #define NMINODE             64   // maximum number of inodes
 #define NFD                  8   // maximum number of open files per process
 #define NOFT                32   // maximum number of open files in system
+#define DMODE           0x41ED   // constant INODE.s_mode == dir
+#define RMODE           0x81A4   // constant INODE.s_mode == reg
 
 // In-memory inodes structure
 typedef struct minode{		
-  INODE INODE;            // disk INODE
-  int   dev, ino;
-  int   cacheCount;       // minode in cache count
-  int   shareCount;       // number of users on this minode
-  int   modified;         // modified while in memory
-  int   id;               // index ID
-  struct minode *next;    // pointer to next minode
+    INODE INODE;            // disk INODE
+    int   dev, ino;
+    int   cacheCount;       // minode in cache count
+    int   shareCount;       // number of users on this minode
+    int   modified;         // modified while in memory
+    int   id;               // index ID
+    struct minode *next;    // pointer to next minode
 
 }MINODE;
 
 // Open File Table structure
 typedef struct oft{
-  int   mode;                  // file open mode (read, write, append, etc.)
-  int   shareCount;            // number of processes sharing this OFT
-  struct minode *inodeptr;     // pointer to the inode of the opened file
-  long  offset;                // current position within the file
+    int   mode;                  // file open mode (read, write, append, etc.)
+    int   shareCount;            // number of processes sharing this OFT
+    struct minode *inodeptr;     // pointer to the inode of the opened file
+    long  offset;                // current position within the file
 } OFT;
 
 // PROC structure
 typedef struct proc{
-  int   uid;                   // user ID of the process (0 or nonzero)
-  int   gid;                   // group ID of the process (same as uid)
-  int   pid;                   // process ID (1 or 2)
-  struct minode *cwd;          // pointer to the current working directory of the process
-  OFT   *fd[NFD];              // array of file descriptors for the process
+    int   uid;                   // user ID of the process (0 or nonzero)
+    int   gid;                   // group ID of the process (same as uid)
+    int   pid;                   // process ID (1 or 2)
+    struct minode *cwd;          // pointer to the current working directory of the process
+    OFT   *fd[NFD];              // array of file descriptors for the process
 } PROC;
 
 #endif

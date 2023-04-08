@@ -6,11 +6,8 @@ sudo mke2fs -b 1024 -I 128 diskimage 4096    # INODE size=128 bytes
 
 sudo mount diskimage /mnt
 
-(cd /mnt; sudo rmdir lost+found; sudo mkdir dir1 dir2;
-                                 sudo mkdir dir1/dir3 dir2/dir4;
-                                 sudo touch file1 file2)
-
+(cd /mnt; sudo rmdir lost+found)
 sudo umount /mnt
 
-
+sudo chown randall diskimage
 show diskimage

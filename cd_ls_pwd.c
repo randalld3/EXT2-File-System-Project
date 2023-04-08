@@ -11,7 +11,7 @@ extern PROC   *running;          // pointer to the current running PROC structur
 extern MINODE minode[NMINODE];   // array of all MINODE structures
 extern MINODE *freeList;         // pointer to the head of the free MINODE list
 extern MINODE *cacheList;        // pointer to the head of the cached MINODE list
-extern MINODE *root;             // pointer to the root MINODE
+extern MINODE *root, *reccwd;             // pointer to the root MINODE
 
 extern OFT    oft[NOFT];         // array of all OFT structures
 
@@ -72,7 +72,9 @@ int ls_file(MINODE *mip, char *fname)
     printf("%4d ", mip->INODE.i_gid);   // gid
     printf("%4d ", mip->INODE.i_uid);   // uid
     printf("%8ld ", mip->INODE.i_size);  // file size
-    strcpy(ftime, ctime(&mip->INODE.i_mtime)); // print time in calendar form
+    time_t mytime = mip->INODE.i_mtime;
+    strcpy(ftime, ctime(&mytime));
+    // strcpy(ftime, ctime(&mip->INODE.i_mtime)); // print time in calendar form
     ftime[strlen(ftime) - 1] = 0;        // kill \n at end
     printf("%s ", ftime);                
     printf("%s ", fname); // print file basename
@@ -93,12 +95,11 @@ int ls_dir(MINODE *pip)
     DIR  *dp;
     char *cp;
     MINODE* mip;
-  
-    printf("simple ls_dir()\n");   
 
     get_block(dev, pip->INODE.i_block[0], sbuf);    // Read the first block of the directory's data into a buffer
     dp = (DIR *)sbuf;    // dp points to the first directory entry within the buffer
     cp = sbuf;    // cp points to the start of the buffer
+    printf("i_block[0] = %d\n", pip->INODE.i_block[0]);
 
     // Loop through all of the directory entries within the buffer
     while (cp < sbuf + BLKSIZE){
@@ -106,9 +107,7 @@ int ls_dir(MINODE *pip)
         // Copy the name of the current directory entry into the 'name' buffer and null-terminate it
         strncpy(name, dp->name, dp->name_len);
         name[dp->name_len] = 0;
-
         mip = iget(dev, dp->inode);   // Get the MINODE structure for the current file
-
         ls_file(mip, name);   // Call ls_file() to print information about the current file
         iput(mip);   // Release the MINODE structure for the current file
 
