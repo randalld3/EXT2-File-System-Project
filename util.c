@@ -241,7 +241,7 @@ MINODE *path2inode(char *pathname)
         iput(mip);             // release current mip
         mip = iget(dev, ino);  // change to new mip of (dev, ino)
     }
-
+    mip->shareCount++;
     return mip; // Return the final MINOD
 }   
 

@@ -32,6 +32,7 @@ int  requests, hits;
 #include "rmdir.c"
 #include "mkdir_creat.c"
 #include "link_unlink.c"
+#include "chmod_stat.c"
 
 int init()
 {
@@ -118,7 +119,7 @@ int main(int argc, char *argv[ ])
         bzero(pathname, sizeof(pathname));
         bzero(parameter, sizeof(parameter));
 
-        printf("enter command [cd|ls|pwd|mkdir|creat|rmdir|link|unlink|symlink |show|hits|exit] : "); // prompt the user to enter a command
+        printf("enter command [cd|ls|pwd|mkdir|creat|rmdir|link|unlink|symlink|chmod |show|hits|exit] : "); // prompt the user to enter a command
         fgets(line, 128, stdin); // read a line from the user
         line[strlen(line)-1] = 0;    // remove the newline character from the end of the line
 
@@ -155,6 +156,9 @@ int main(int argc, char *argv[ ])
             unlink();
         if (strcmp(cmd, "symlink")==0)
             symlink();
+
+        if (strcmp(cmd, "chmod")==0)
+            do_chmod();
     }
 }
 
@@ -184,7 +188,7 @@ int show_dir(MINODE *mip)  // show contents of mip DIR: same as in LAB5
 
 int hit_ratio()
 {
-    MINODE *mip = running->cwd; // Get the current working directory MINODE
+    MINODE *mip = running->cwd, *temp = 0; // Get the current working directory MINODE
     int n = 0, parentIno, ino;
     char buf[BLKSIZE];
     int iArr[MAX];
@@ -200,6 +204,11 @@ int hit_ratio()
     }
     iArr[n++] = root->ino; // Add the inode number of the root directory to iArr
   
+    while (mip=dequeue(&cacheList)){
+        enqueue(&temp, mip);
+    }
+    cacheList = temp;
+    
     mip = cacheList;
     hits = requests = 0;
     printf("cacheList=");

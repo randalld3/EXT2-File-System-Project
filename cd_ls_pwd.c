@@ -121,7 +121,7 @@ int ls()
     MINODE *mip = running->cwd;    // Get the current working directory from the running process.
     
     ls_dir(mip); // Call ls_dir() to print information about the files within the current directory.
-    iput(mip); // Release the MINODE structure for the current working directory.
+    // iput(mip); // FIXME TAKEN AWAY Release the MINODE structure for the current working directory.
     
 }
 

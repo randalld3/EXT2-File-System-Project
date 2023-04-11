@@ -74,6 +74,7 @@ int link()
 
     if (S_ISDIR(mip->INODE.i_mode)){
         printf("not allowed! inode=%d at %s is dir\n", mip->ino, pathname);
+        iput(mip);
         return -1;
     }
 
@@ -86,12 +87,14 @@ int link()
     parampip = path2inode(parameter);
     if (parampip){
         printf("error: inode=%d at %s already exits\n", parampip->ino, parameter);
+        iput(parampip);
         return -1;
     }
 
     parampip = path2inode(parentp);
     if (!S_ISDIR(parampip->INODE.i_mode)){
         printf("error : inode=%d at %s is not dir\n", parampip->ino, parentp);
+        iput(parampip);
         return -1;
     }
 
@@ -131,24 +134,30 @@ int unlink()
     }
     if (S_ISDIR(mip->INODE.i_mode)){
         printf("not allowed! inode=%d at %s is dir\n", mip->ino, pathname);
+        iput(mip);
         return -1;
     }
 
-
+    strcpy(child, pathname);
+    strcpy(parent, pathname);
+    parentp = dirname(pathname);
+    childp = basename(child);
+    pip = path2inode(parentp);
+    rm_child(pip, childp);
+    pip->modified = 1;
+    iput(pip);
     mip->INODE.i_links_count--;
-    if (!S_ISLNK(mip->INODE.i_mode)){
-    if(!mip->INODE.i_links_count){
+
+    
+    
+    if(mip->INODE.i_links_count){
+        mip->modified = 1;
+    }
+    else{
         truncate(mip);
         idalloc(dev, mip);
-        strcpy(child, pathname);
-        strcpy(parent, pathname);
-        parentp = dirname(pathname);
-        childp = basename(child);
-        pip = path2inode(parentp);
-        rm_child(pip, childp);
     }
-    }
-
+    iput(mip);
 }
 
 int symlink()
@@ -185,9 +194,10 @@ int symlink()
 
     strcpy(pathname, parameter);
     bzero(absPath, sizeof(absPath));
-    printf("creat_file=%s\n", pathname);
+    iput(mip);
     if (creat_file() == -1)
         return -1;
+    
 
     mip = path2inode(pathname);
     mip->INODE.i_mode = LMODE;
@@ -215,9 +225,11 @@ int readlink(char *fname, char linkname[])
     }
     if (!S_ISLNK(mip->INODE.i_mode)){
         printf("error : ino=%d at %s is not link\n", mip->ino, pathname);
+        iput(mip);
         return -1;
     }
 
     get_block(dev, mip->INODE.i_block[0], buf);
     strcpy(linkname, buf);
+    iput(mip); // FIXME ADDED
 }

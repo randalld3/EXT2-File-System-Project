@@ -44,7 +44,7 @@ int make_dir()
         strcat(absPath, pathname);
         strcpy(pathname, absPath);
     }
-
+    printf("AFTER RECABSPATH sharecount = %d\n", running->cwd->shareCount);
     strcpy(parent, pathname);
     strcpy(child, pathname);
 
@@ -52,18 +52,20 @@ int make_dir()
     childp = basename(child);
 
     pip = path2inode(parent);
-    
+    printf("AFTER PATH2INODE sharecount = %d\n", running->cwd->shareCount);
     if (!pip){
         printf("inode at %s not found\n", parent);
         return -1;
     }
     if (!S_ISDIR(pip->INODE.i_mode)){
         printf("inode %d at %s is not dir\n", pip->ino, parent);
+        iput(pip);
         return -1;
     }
     mip = path2inode(pathname);
     if (mip){
         printf("cannot mkdir : child inode %d already present at %s\n", mip->ino, pathname);
+        iput(mip);
         return -1;
     }
 
@@ -168,7 +170,7 @@ int creat_file()
     char *parentp, *childp;
     MINODE *mip, *pip;
 
-    if (!pathname){
+    if (!pathname[0]){
         printf("error : no pathname specified\n");
         return -1;
     }
@@ -195,11 +197,13 @@ int creat_file()
     }
     if (!S_ISDIR(pip->INODE.i_mode)){
         printf("inode %d at %s is not dir\n", pip->ino, parentp);
+        iput(pip);
         return -1;
     }
     mip = path2inode(pathname);
     if (mip){
         printf("cannot creat : child inode %d already present at %s\n", mip->ino, pathname);
+        iput(mip);
         return -1;
     }
 
