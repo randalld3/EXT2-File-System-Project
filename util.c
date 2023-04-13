@@ -237,11 +237,13 @@ MINODE *path2inode(char *pathname)
         int ino = search(mip, name[i]); // Search for the directory entry matching the current token in the current directory
         if (ino==0)
             return 0;
-
+            
+        mip->shareCount++;
         iput(mip);             // release current mip
         mip = iget(dev, ino);  // change to new mip of (dev, ino)
     }
     mip->shareCount++;
+    
     return mip; // Return the final MINOD
 }   
 

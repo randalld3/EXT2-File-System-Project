@@ -107,6 +107,8 @@ int main(int argc, char *argv[ ])
     
     running->cwd = iget(dev, 2);  // set the current working directory of the running process to root
     printf("ninodes=%d  nblocks=%d inode_size=%d\n", ninodes, nblocks, sizeof(running->cwd->INODE));
+    printf("inodes_per_block = %d ifactor=%d\n", BLKSIZE / sizeof(running->cwd->INODE), 
+                                                 sizeof(running->cwd->INODE) / 128);
     printf("bmap=%d  imap=%d  iblk=%d\n", bmap, imap, inode_start);  // print block numbers of bitmaps and inode table
     printf("mount root\n");
     printf("creating P%d as running process\n", running->pid);
@@ -119,7 +121,7 @@ int main(int argc, char *argv[ ])
         bzero(pathname, sizeof(pathname));
         bzero(parameter, sizeof(parameter));
 
-        printf("enter command [cd|ls|pwd|mkdir|creat|rmdir|link|unlink|symlink|chmod |show|hits|exit] : "); // prompt the user to enter a command
+        printf("enter command [cd|ls|pwd|mkdir|creat|rmdir|link|unlink|symlink|chmod |exit] : "); // prompt the user to enter a command
         fgets(line, 128, stdin); // read a line from the user
         line[strlen(line)-1] = 0;    // remove the newline character from the end of the line
 

@@ -71,13 +71,12 @@ int link()
         printf("error : inode not found at %s\n", pathname);
         return -1;
     }
-
     if (S_ISDIR(mip->INODE.i_mode)){
         printf("not allowed! inode=%d at %s is dir\n", mip->ino, pathname);
         iput(mip);
         return -1;
     }
-
+    mip->shareCount -=2;
     strcpy(parent, parameter);
     strcpy(child, parameter);
 
@@ -97,11 +96,12 @@ int link()
         iput(parampip);
         return -1;
     }
-
+    
     enter_child(parampip, mip->ino, childp);
     mip->INODE.i_links_count++;
     mip->modified = 1;
     parampip->modified = 1;
+    parampip->shareCount--;
 
     iput(mip);
     iput(parampip);
@@ -194,6 +194,7 @@ int symlink()
 
     strcpy(pathname, parameter);
     bzero(absPath, sizeof(absPath));
+    mip->shareCount--;
     iput(mip);
     if (creat_file() == -1)
         return -1;
@@ -209,6 +210,7 @@ int symlink()
 
     mip->INODE.i_size = strlen(temp);
     mip->modified = 1;
+    mip->shareCount--;
     iput(mip);
 
 }
@@ -231,5 +233,5 @@ int readlink(char *fname, char linkname[])
 
     get_block(dev, mip->INODE.i_block[0], buf);
     strcpy(linkname, buf);
-    iput(mip); // FIXME ADDED
+    iput(mip); 
 }

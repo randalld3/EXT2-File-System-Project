@@ -29,16 +29,30 @@ extern int  requests, hits;      // number of requests and hits for the cache
 int cd()
 {
     MINODE* mip = path2inode(pathname); // gets the MINODE of the directory specified in the pathname
+    char linkname[64];
 
     if (mip){
         if ((mip->INODE.i_mode & 0xF000) == 0x4000){ // checks if the MINODE is a directory
             printf("cd to [dev ino]=[%d %d]\n", mip->dev, mip->ino);
             iput(running->cwd); // releases the current working directory MINODE
             running->cwd = mip; // sets the current working directory to the new directory
+            iput(running->cwd);
+            printf("after cd : cwd = [%d %d]\n", running->cwd->dev, running->cwd->ino);
+            return mip;
+        }
+        else if (S_ISLNK(mip->INODE.i_mode)){
+            readlink(pathname, linkname);
+            strcpy(pathname, linkname);
+            mip = path2inode(pathname);
+            printf("cd to [dev ino]=[%d %d]\n", mip->dev, mip->ino);
+            iput(running->cwd); // releases the current working directory MINODE
+            running->cwd = mip; // sets the current working directory to the new directory
+            iput(running->cwd);
             printf("after cd : cwd = [%d %d]\n", running->cwd->dev, running->cwd->ino);
             return mip;
         }
     }
+    iput(mip);
     printf("%s not a directory\n", pathname); // if directory not found
     return 0;
 }

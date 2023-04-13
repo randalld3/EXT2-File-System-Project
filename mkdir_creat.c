@@ -44,7 +44,7 @@ int make_dir()
         strcat(absPath, pathname);
         strcpy(pathname, absPath);
     }
-    printf("AFTER RECABSPATH sharecount = %d\n", running->cwd->shareCount);
+
     strcpy(parent, pathname);
     strcpy(child, pathname);
 
@@ -52,7 +52,7 @@ int make_dir()
     childp = basename(child);
 
     pip = path2inode(parent);
-    printf("AFTER PATH2INODE sharecount = %d\n", running->cwd->shareCount);
+
     if (!pip){
         printf("inode at %s not found\n", parent);
         return -1;
