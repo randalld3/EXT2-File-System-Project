@@ -5,26 +5,10 @@
 //*********** globals in main.c **********
 
 // global variables defined in main.c that are used in this file
-extern PROC   proc[NPROC];       // array of all PROC structures
 extern PROC   *running;          // pointer to the current running PROC structure
-
-extern MINODE minode[NMINODE];   // array of all MINODE structures
-extern MINODE *freeList;         // pointer to the head of the free MINODE list
-extern MINODE *cacheList;        // pointer to the head of the cached MINODE list
-extern MINODE *root, *reccwd;             // pointer to the root MINODE
-
-extern OFT    oft[NOFT];         // array of all OFT structures
-
-extern char gline[256];          // global buffer to hold token strings of a pathname
-extern char *name[64];           // array of token string pointers
-extern int  n;                   // number of token strings in the pathname
-
-extern int ninodes, nblocks;     // number of inodes and number of blocks in the device
-extern int bmap, imap, inodes_start, iblk;  // block numbers for the bitmap, inode table, and the first data block on the device
-
-extern int  fd, dev;             // file descriptor and device number of the current file
-extern char cmd[16], pathname[128], parameter[128]; // command, pathname, and parameter strings
-extern int  requests, hits;      // number of requests and hits for the cache
+extern MINODE *root;
+extern int  dev;             // device number of the current file
+extern char pathname[128];
 
 int cd()
 {
@@ -53,7 +37,9 @@ int cd()
         }
     }
     iput(mip);
+    red();
     printf("%s not a directory\n", pathname); // if directory not found
+    white();
     return 0;
 }
 
@@ -90,14 +76,19 @@ int ls_file(MINODE *mip, char *fname)
     strcpy(ftime, ctime(&mytime));
     // strcpy(ftime, ctime(&mip->INODE.i_mtime)); // print time in calendar form
     ftime[strlen(ftime) - 1] = 0;        // kill \n at end
-    printf("%s ", ftime);                
+    printf("%s ", ftime);
+    if (S_ISDIR(mip->INODE.i_mode)) blue();
+    if (S_ISLNK(mip->INODE.i_mode)) cyan();                
     printf("%s ", fname); // print file basename
     // print -> linkname of symbolic file
     if ((mip->INODE.i_mode & 0xF000) == 0xA000){ // is linked
         readlink(fname, linkname);  // use readlink() to read linkname
-        printf(" -> %s", linkname); // print linked name 
+        white();
+        printf(" -> ");
+        blue();
+        printf("%s", linkname); // print linked name 
     }
-
+    white();
     printf("[%d %d]", mip->dev, mip->ino);
     putchar('\n');
 }
@@ -175,5 +166,4 @@ rpwd(MINODE *wd)
 
     printf("/%s", myname);    // Print the name of the working directory, preceded by a slash
 }
-
 

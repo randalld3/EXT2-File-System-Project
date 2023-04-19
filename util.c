@@ -29,15 +29,15 @@ extern int  requests, hits; // Variables for caching information
 
 int tst_bit(char *buf, int bit)
 {
-    return buf[bit / 8] & (1 << (bit % 8));
+    return buf[bit / 8] & (1 << (bit % 8)); // retrieve the requested bit using mailmans algorithm
 }
 
 int set_bit(char *buf, int bit)
 {
     int bitNum, byte;
-    byte = bit / 8;
-    bitNum = bit % 8;
-    if (buf[byte] |= (1 << bitNum))
+    byte = bit / 8; // mailmans algorithm for byte number
+    bitNum = bit % 8; // mailmans algorithm for bit number
+    if (buf[byte] |= (1 << bitNum)) // set the requested bit
         return 1;
     return 0;
 }
@@ -45,9 +45,9 @@ int set_bit(char *buf, int bit)
 int clr_bit(char *buf, int bit)
 {
     int bitNum, byte;
-    byte = bit / 8;
-    bitNum = bit % 8;
-    if (buf[byte] &= ~(1 << bitNum))
+    byte = bit / 8; // mailmans algorithm for byte number
+    bitNum = bit % 8; // mailmans algorithm for bit number
+    if (buf[byte] &= ~(1 << bitNum)) // clear the requested bit
         return 1;
     return 0;
 }
@@ -55,14 +55,14 @@ int clr_bit(char *buf, int bit)
 int get_block(int dev, int blk, char buf[ ]) // read a block of data from a device
 {
     lseek(dev, blk*BLKSIZE, SEEK_SET); // set the read/write position at the beginning of the block
-    int n = read(fd, buf, BLKSIZE); // read the block of data
+    int n = read(dev, buf, BLKSIZE); // read the block of data
     return n;  // return the number of bytes read
 }
 
 int put_block(int dev, int blk, char buf[ ])
 {
     lseek(dev, blk*BLKSIZE, SEEK_SET); // set the read/write position at the beginning of the block
-    int n = write(fd, buf, BLKSIZE); // write the block of data
+    int n = write(dev, buf, BLKSIZE); // write the block of data
     return n;  // return the number of bytes written
 }    
 
@@ -231,7 +231,9 @@ MINODE *path2inode(char *pathname)
 
     for (int i=0; i < n; i++){ // For each token in the pathname
         if (!S_ISDIR(mip->INODE.i_mode)){ // If the current MINODE is not a directory
+            red();
             printf("Error: %s not a directory\n", name[i]); // Print error message and return 0
+            white();
             return 0;
         }
         int ino = search(mip, name[i]); // Search for the directory entry matching the current token in the current directory
@@ -265,14 +267,15 @@ int findmyname(MINODE *pip, int myino, char myname[ ])
             strncpy(myname, dp->name, dp->name_len); // copy the name from the directory entry to temp
             myname[dp->name_len] = 0;  // convert dp->name into a string
 
-            // printf("%8d%8d%8u       %s\n", dp->inode, dp->rec_len, dp->name_len, *myname);
             printf("found %s : ino = %d\n", dp->name, dp->inode); // print message indicating target found
             return dp->inode;
         }
         cp += dp->rec_len;      // advance cp by rec_len
         dp = (DIR *)cp;         // pull dp to cp
     }
+    red();
     printf("Error: inode not found\n");
+    white();
     return(0);
 }
  
@@ -303,19 +306,17 @@ int recAbsPath(MINODE *mip)
     MINODE *pip;
     int parentIno, ino;
 
-    if (mip == root){
-        strcat(absPath, "/");
+    if (mip == root){ // base case
+        strcat(absPath, "/"); // attach / to beginning of absPath
         return;
     }
-    printf("mip=%d\n", mip);
-    printf("root=%d\n", root);
-    parentIno = findino(mip, &ino);
-    pip = iget(dev, parentIno);
-    findmyname(pip, ino, myname);
-    pip->cacheCount--;
-    running->cwd = pip;
-    recAbsPath(pip);
-    strcat(absPath, myname);
-    strcat(absPath, "/");
-    iput(pip);
+    parentIno = findino(mip, &ino); // find parent ino
+    pip = iget(dev, parentIno); // get parent minode pointer
+    findmyname(pip, ino, myname); // find name of parent minode
+    pip->cacheCount--; // we don't want to increment cachecount in this search
+    running->cwd = pip; // necessary for above functions since they rely on running's minode
+    recAbsPath(pip); // recursive step
+    strcat(absPath, myname); // after recursion append name of current minode
+    strcat(absPath, "/"); // append / before next dir
+    iput(pip); // release minode back after get
 }

@@ -29,10 +29,14 @@ int  requests, hits;
 #include "dalloc.c"
 #include "util.c"
 #include "cd_ls_pwd.c"
+#include "show_hits.c"
 #include "rmdir.c"
 #include "mkdir_creat.c"
 #include "link_unlink.c"
 #include "chmod_stat.c"
+#include "open_close.c"
+#include "read.c"
+#include "style.c"
 
 int init()
 {
@@ -70,10 +74,14 @@ char *disk = "diskimage";
 
 int main(int argc, char *argv[ ]) 
 {
-    char line[128];
-    char buf[BLKSIZE];
+    char line[128], buf[BLKSIZE];
+    char c;
+    int fd, gd;
 
-    fd = dev = open(disk, O_RDWR);  // open the disk file
+    show_tux();
+    c = getchar();
+
+    dev = open(disk, O_RDWR);  // open the disk file
     printf("dev = %d\n", dev);  
     if (dev < 0){
         printf("Failed to open %s \n", disk); // print an error message if the disk file is not opened
@@ -94,7 +102,7 @@ int main(int argc, char *argv[ ])
     // Print the name of the working directory, preceded by a slash
     ninodes = sp->s_inodes_count;
     nblocks = sp->s_blocks_count;
-    
+    int isize = sp->s_inode_size;
 
     get_block(dev, 2, buf);  // read block 2 from disk into buf
     GD *gp = (GD *)buf;  // cast buf as a GD struct pointer to access the group descriptor
@@ -106,127 +114,34 @@ int main(int argc, char *argv[ ])
     root = iget(dev, 2);  // get the inode of the root directory (inode number 2)
     
     running->cwd = iget(dev, 2);  // set the current working directory of the running process to root
-    printf("ninodes=%d  nblocks=%d inode_size=%d\n", ninodes, nblocks, sizeof(running->cwd->INODE));
-    printf("inodes_per_block = %d ifactor=%d\n", BLKSIZE / sizeof(running->cwd->INODE), 
-                                                 sizeof(running->cwd->INODE) / 128);
+    printf("ninodes=%d  nblocks=%d inode_size=%d\n", ninodes, nblocks, isize); // print inode information
+    printf("inodes_per_block = %d ifactor=%d\n", BLKSIZE / isize, isize / 128); // print information on inodes per block
     printf("bmap=%d  imap=%d  iblk=%d\n", bmap, imap, inode_start);  // print block numbers of bitmaps and inode table
-    printf("mount root\n");
-    printf("creating P%d as running process\n", running->pid);
-    printf("root shareCount=%d\n", root->shareCount);
+    printf("mount root\n"); 
+    printf("creating P%d as running process\n", running->pid); //print running process
+    printf("root shareCount=%d\n", root->shareCount); //total number of procs that are using shareCount
 
     while(1){
         printf("P%d running\n", running->pid); // print the process ID of the running process
         pathname[0] = parameter[0] = 0; // initialize the input strings to empty
-        bzero(absPath, sizeof(absPath));
-        bzero(pathname, sizeof(pathname));
-        bzero(parameter, sizeof(parameter));
+        bzero(absPath, sizeof(absPath)); // zero out absPath
+        bzero(pathname, sizeof(pathname)); // zero out pathname
+        bzero(parameter, sizeof(parameter)); // zero out parameter
 
-        printf("enter command [cd|ls|pwd|mkdir|creat|rmdir|link|unlink|symlink|chmod |exit] : "); // prompt the user to enter a command
+        green();
+        printf("enter command [cd|ls|pwd|mkdir|creat|rmdir|link|unlink|symlink|chmod|open|close|dup|dup2|pfd|cat |exit] : "); // prompt the user to enter a command
         fgets(line, 128, stdin); // read a line from the user
         line[strlen(line)-1] = 0;    // remove the newline character from the end of the line
-
+        white();
         if (line[0]==0)
             continue; // if the user enters nothing, continue prompting for a command
       
         sscanf(line, "%s %s %64c", cmd, pathname, parameter); // parse the command, pathname, and parameter from the input line
       
-        if (strcmp(cmd, "ls")==0) // list files
-            ls();
-        if (strcmp(cmd, "cd")==0) // change directory
-            cd();
-        if (strcmp(cmd, "pwd")==0) // print working directory
-            pwd();
+        do_command();
 
-     
-        if (strcmp(cmd, "show")==0) // show directoy of current running program
-            show_dir(running->cwd);
-        if (strcmp(cmd, "hits")==0) //
-            hit_ratio();
-        if (strcmp(cmd, "exit")==0) // exit the program
-            quit();
 
-        if (strcmp(cmd, "mkdir")==0)
-            make_dir();
-        if (strcmp(cmd, "creat")==0)
-            creat_file();
-        if (strcmp(cmd, "rmdir")==0)
-            rmdir();
-
-        if (strcmp(cmd, "link")==0)
-            link();
-        if (strcmp(cmd, "unlink")==0)
-            unlink();
-        if (strcmp(cmd, "symlink")==0)
-            symlink();
-
-        if (strcmp(cmd, "chmod")==0)
-            do_chmod();
     }
-}
-
-int show_dir(MINODE *mip)  // show contents of mip DIR: same as in LAB5
-{
-    char sbuf[BLKSIZE], temp[256];
-    DIR *dp;
-    char *cp;
-
-    // ASSUME only one data block i_block[0]
-    // YOU SHOULD print i_block[0] number to see its value
-    get_block(dev, mip->INODE.i_block[0], sbuf); // read the block containing directory entries
-
-    dp = (DIR *)sbuf; // set dp to point to the first directory entry in the block
-    cp = sbuf; // set the character pointer to the start of sbuf
-    printf("   i_number rec_len name_len   name\n");
-
-    while(cp < sbuf + BLKSIZE){ // loop through all directory entries in the block
-        strncpy(temp, dp->name, dp->name_len); // copy the directory name into temp
-        temp[dp->name_len] = 0;  // convert dp->name into a string  
-        printf("%8d%8d%8u       %s\n", dp->inode, dp->rec_len, dp->name_len, temp);
-
-        cp += dp->rec_len;      // advance cp by rec_len
-        dp = (DIR *)cp;         // pull dp to cp
-    }
-}
-
-int hit_ratio()
-{
-    MINODE *mip = running->cwd, *temp = 0; // Get the current working directory MINODE
-    int n = 0, parentIno, ino;
-    char buf[BLKSIZE];
-    int iArr[MAX];
-
-    while(1){ // Traverse up the directory tree, recording the inodes in iArr
-        mip->cacheCount--;
-        parentIno = findino(mip, &ino); // Find the inode number and parent inode number of the current MINODE
-        iArr[n++] = mip->ino;
-        mip = iget(dev, parentIno); // Get the MINODE of the parent directory
-        iput(mip); // Release the current MINODE
-        if (mip == root) // If the current MINODE is the root directory, break
-            break;
-    }
-    iArr[n++] = root->ino; // Add the inode number of the root directory to iArr
-  
-    while (mip=dequeue(&cacheList)){
-        enqueue(&temp, mip);
-    }
-    cacheList = temp;
-    
-    mip = cacheList;
-    hits = requests = 0;
-    printf("cacheList=");
-    while(mip){
-        printf("c%d[%d %d]s%d->", mip->cacheCount, mip->dev, mip->ino, mip->shareCount);
-        for(int i = 0; i < n; i++){ // Check if the current MINODE's inode number is in iArr
-            if (mip->ino == iArr[i]){ // If it is, add the current MINODE's cache count to hits
-                hits +=mip->cacheCount;
-                break;
-            }
-        }
-        requests +=mip->cacheCount; // Add the current MINODE's cache count to requests
-        mip = mip->next;
-    }
-    printf("NULL\n");
-    printf("requests=%d hits=%d hit_ratio=%d%%\n", requests, hits, (100 * hits) / requests);
 }
 
 int quit()
