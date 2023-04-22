@@ -1,45 +1,40 @@
 // read.c
 #include "type.h"
+
 /*********** globals in main.c ***********/
-extern PROC   proc[NPROC];   // process table
 extern PROC   *running;     // pointer to the currently running process
 
-extern MINODE minode[NMINODE];   // In-memory Inodes structure array
-extern MINODE *freeList;         // List of free inodes
-extern MINODE *cacheList;        // List of inodes that are currently in use
+extern MINODE *reccwd; // Pointer for recursive pathname function
 
-extern MINODE *root, *reccwd; // Pointer to root directory inode
-
-extern OFT    oft[NOFT]; // Open File Table
-
-extern char gline[256];   // global line hold token strings of pathname
-extern char *name[64];    // token string pointers
-extern int  n;            // number of token strings                    
-
-// Variables for holding file system metadata
-extern int ninodes, nblocks;
-extern int bmap, imap, inode_start, iblk;  // bitmap, inodes block numbers
+extern OFT    oft[NOFT]; // Open File Table          
 
 // Variables for file descriptor and command processing
 extern int  fd, dev;
-extern char cmd[16], pathname[128], parameter[128], absPath[128];
-extern int  requests, hits; // Variables for caching information
+extern char pathname[128], parameter[128], absPath[128];
+
+/**************** read.c file **************/
 
 int read_file()
 {
     char *buf[BLKSIZE];
     if (!pathname[0]){
+        red();
         printf("error : fd not specified\n");
+        white();
         return -1;
     }
     int fd = atoi(pathname);
     int nbytes = atoi(parameter);
     if(!running->fd[fd]){
+        red();
         printf("error : fd not opened\n");
+        white();
         return -1;
     }
     if (running->fd[fd]->mode != 0 && running->fd[fd]->mode != 2){
+        red();
         printf("error : fd in incompatible mode\n");
+        white();
         return -1;
     }
 
@@ -49,11 +44,15 @@ int read_file()
 int myread(int fd, char *buf, int nbytes)
 {
     int lbk, blk, startByte, count = 0;
-    int avil = running->fd[fd]->inodeptr->INODE.i_size - running->fd[fd]->offset;
-    char *cq = buf;
     OFT *oftp = running->fd[fd];
+    int avil = oftp->inodeptr->INODE.i_size - oftp->offset;
+    char *cq = buf;
+    
     int ibuf[BLKSIZE], dbuf[BLKSIZE];
     char readbuf[BLKSIZE];
+
+    if (nbytes > avil)
+        nbytes = avil;
 
     while (nbytes && avil){
         /*Compute LOGICAL BLOCK number lbk and startByte in that block from offset*/
@@ -84,9 +83,7 @@ int myread(int fd, char *buf, int nbytes)
         /* copy from startByte to buf[ ], at most remain bytes in this block */
         char *cp = readbuf + startByte;
         int remain = BLKSIZE - startByte; // number of bytes remain in readbuf[]
-
         int cbytes = nbytes <= remain ? nbytes : remain;
-
         memcpy(cq, cp, cbytes);
         oftp->offset += cbytes;
         count += cbytes;
@@ -104,32 +101,7 @@ int myread(int fd, char *buf, int nbytes)
         }
     }
 
-    printf("myread: read %d char from file descriptor %d\n", count, fd);  
+    // printf("myread: read %d char from file descriptor %d\n", count, fd);  
     return count;   // count is the actual number of bytes read
 }
 
-int mycat(char *filename)
-{
-    char mybuf[BLKSIZE], dummy = 0;
-    int n, i;
-
-    strcpy(pathname, filename);
-    strcpy(parameter, "0");
-    int fd = open_file();
-
-    if (fd < 0)
-        return -1;
-
-    while (n = myread(fd, mybuf, BLKSIZE)){
-        mybuf[n] = 0;
-        i = 0;
-
-        while (mybuf[i]){
-            mybuf[i] == '\n' ? putchar('\n') : putchar(mybuf[i]);
-            i++;
-        }
-    }
-    putchar('\n');
-    close_file(fd);
-    return 0;
-}

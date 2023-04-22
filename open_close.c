@@ -1,42 +1,36 @@
 // open_close.c
 #include "type.h"
 /*********** globals in main.c ***********/
-extern PROC   proc[NPROC];   // process table
 extern PROC   *running;     // pointer to the currently running process
 
-extern MINODE minode[NMINODE];   // In-memory Inodes structure array
-extern MINODE *freeList;         // List of free inodes
-extern MINODE *cacheList;        // List of inodes that are currently in use
+extern MINODE *reccwd; // Pointer for recursive pathname function
 
-extern MINODE *root, *reccwd; // Pointer to root directory inode
-
-extern OFT    oft[NOFT]; // Open File Table
-
-extern char gline[256];   // global line hold token strings of pathname
-extern char *name[64];    // token string pointers
-extern int  n;            // number of token strings                    
-
-// Variables for holding file system metadata
-extern int ninodes, nblocks;
-extern int bmap, imap, inode_start, iblk;  // bitmap, inodes block numbers
+extern OFT    oft[NOFT]; // Open File Table          
 
 // Variables for file descriptor and command processing
 extern int  fd, dev;
-extern char cmd[16], pathname[128], parameter[128], absPath[128];
-extern int  requests, hits; // Variables for caching information
+extern char pathname[128], parameter[128], absPath[128];
+
+/**************** open_close.c file **************/
 
 int dup(int fd)
 {
     if (fd < 0 || fd >= NFD){
+        red();
         printf("error : fd not in range\n");
+        white();
         return -1;
     }
     if (running->fd[fd]==0){
+        red();
         printf("error : fd not open\n");
+        white();
         return -1;
     }
     if (running->fd[fd]->mode){
+        red();
         printf("error : fd open in incompatible mode\n");
+        white();
         return -1;
     }
 
@@ -48,22 +42,30 @@ int dup(int fd)
             return fd;
         }
     }
+    red();
     printf("error : no fd avaiable for dup\n");
+    white();
     return -1;
 }
 
 int dup2(int fd, int gd)
 {
     if (fd < 0 || fd >= NFD || gd < 0 || gd >= NFD){
+        red();
         printf("error : fd/gd not in range\n");
+        white();
         return -1;
     }
     if (running->fd[fd]==0){
+        red();
         printf("error : fd not open\n");
+        white();
         return -1;
     }
     if (running->fd[fd]->mode){
+        red();
         printf("error : fd open in incompatible mode\n");
+        white();
         return -1;
     }
     if (running->fd[gd])
@@ -75,22 +77,19 @@ int dup2(int fd, int gd)
     return gd;
 }
 
-int useek(int fd, int position)
+int mylseek(int fd, int position)
 {
-    for(int i = 0, temp = 0; i < NFD; ++i){
-        if (running->fd[i] == fd){
-            temp = running->fd[i]->offset + position;
-            if (temp > running->fd[i]->inodeptr->INODE.i_size || temp < 0){
-                printf("error: position out of bounds\n");
-                return -1;
-            }
-            temp = running->fd[i]->offset;
-            running->fd[i]->offset += position;
-            return temp;
-        }
+    int newpos = running->fd[fd]->offset + position;
+
+    if (newpos > running->fd[fd]->inodeptr->INODE.i_size || newpos < 0){
+        red();
+        printf("error: position out of bounds\n");
+        white();
+        return -1;
     }
-    printf("error : fd not found\n");
-    return -1;
+    
+    running->fd[fd]->offset += position;
+    return position;
 }
 
 int pfd()
@@ -175,25 +174,29 @@ int truncate_file(MINODE *mip)
 
 int open_file()
 {
-    if (!pathname[0]){ // need dir to remove
+    if (strlen(pathname)==0){ 
+        red();
         printf("error : no filename specified\n");
+        white();
         return -1;
     }
 
-    if (pathname[0] != '/'){ // process for building absolute pathname
-        reccwd = running->cwd; // saves running->cwd, which will be modified in recAbsPath
-        recAbsPath(running->cwd);
-        running->cwd = reccwd;
-        strcat(absPath, pathname);
-        strcpy(pathname, absPath);
-    }
+    // if (pathname[0] != '/'){ // process for building absolute pathname
+    //     reccwd = running->cwd; // saves running->cwd, which will be modified in recAbsPath
+    //     recAbsPath(running->cwd);
+    //     running->cwd = reccwd;
+    //     strcat(absPath, pathname);
+    //     strcpy(pathname, absPath);
+    // }
 
     MINODE *mip = path2inode(pathname);
     int mode = atoi(parameter);
 
     if (!mip){
         if (!mode){
+            red();
             printf("error : file does not exist\n");
+            white();
             return -1;
         }
         creat_file();
@@ -202,14 +205,18 @@ int open_file()
     }
 
     if (!S_ISREG(mip->INODE.i_mode)){
+        red();
         printf("error : file is not regular file\n");
+        white();
         iput(mip);
         return -1;
     }
 
     for (int i = 0; i < NFD; ++i){
         if (running->fd[i] != 0 && running->fd[i]->inodeptr == mip &&  (running->fd[i]->mode != 0 || mode != 0) ){
+            red();
             printf("error : file already opened with incompatible mode\n");
+            white();
             iput(mip);
             return -1;
         }
@@ -231,7 +238,9 @@ int open_file()
                  break;
         case 3 : oftp->offset = mip->INODE.i_size;
                  break;
-        default: printf("invalid mode\n");
+        default: red();
+                 printf("invalid mode\n");
+                 white();
                  iput(mip);
                  return -1;
     }
@@ -255,11 +264,15 @@ int open_file()
 int close_file(int fd)
 {
     if (fd < 0 || fd >= NFD){
+        red();
         printf("error : fd not in range\n");
+        white();
         return -1;
     }
     if (running->fd[fd] == 0){
+        red();
         printf("error : fd not found\n");
+        white();
         return -1;
     }
 

@@ -10,6 +10,8 @@ extern MINODE *root;
 extern int  dev;             // device number of the current file
 extern char pathname[128];
 
+/**************** cd_ls_pwd.c file **************/
+
 int cd()
 {
     MINODE* mip = path2inode(pathname); // gets the MINODE of the directory specified in the pathname

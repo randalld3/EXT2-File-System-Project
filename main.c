@@ -17,12 +17,14 @@ char gline[256];          // global line hold token strings of pathname
 char *name[64];           // token string pointers
 int  n;                   // number of token strings                    
 
-int ninodes, nblocks;     // ninodes, nblocks from SUPER block
-int bmap, imap, inode_start, iblk;  // bitmap, inodes block numbers
+int ninodes, nblocks, ipb, ifactor;     // ninodes, nblocks from SUPER block, inodes per block, ifactor = inode size / 128
+int bmap, imap, inode_start, iblk;  // bitmap, inodes block numbers, inode start block
 
 int  fd, dev;
 char cmd[16], pathname[128], parameter[128], absPath[128];
 int  requests, hits;
+
+/**************** main.c file **************/
 
 // start up files
 #include "alloc.c"
@@ -36,7 +38,10 @@ int  requests, hits;
 #include "chmod_stat.c"
 #include "open_close.c"
 #include "read.c"
+#include "write.c"
+#include "cat_cp.c"
 #include "style.c"
+#include "head_tail.c"
 
 int init()
 {
@@ -75,12 +80,10 @@ char *disk = "diskimage";
 int main(int argc, char *argv[ ]) 
 {
     char line[128], buf[BLKSIZE];
-    char c;
     int fd, gd;
 
     show_tux();
-    c = getchar();
-
+    
     dev = open(disk, O_RDWR);  // open the disk file
     printf("dev = %d\n", dev);  
     if (dev < 0){
@@ -103,6 +106,8 @@ int main(int argc, char *argv[ ])
     ninodes = sp->s_inodes_count;
     nblocks = sp->s_blocks_count;
     int isize = sp->s_inode_size;
+    ipb = BLKSIZE / isize;
+    ifactor = isize / sizeof(INODE);
 
     get_block(dev, 2, buf);  // read block 2 from disk into buf
     GD *gp = (GD *)buf;  // cast buf as a GD struct pointer to access the group descriptor
@@ -115,7 +120,7 @@ int main(int argc, char *argv[ ])
     
     running->cwd = iget(dev, 2);  // set the current working directory of the running process to root
     printf("ninodes=%d  nblocks=%d inode_size=%d\n", ninodes, nblocks, isize); // print inode information
-    printf("inodes_per_block = %d ifactor=%d\n", BLKSIZE / isize, isize / 128); // print information on inodes per block
+    printf("inodes_per_block = %d ifactor=%d\n", ipb, ifactor); // print information on inodes per block
     printf("bmap=%d  imap=%d  iblk=%d\n", bmap, imap, inode_start);  // print block numbers of bitmaps and inode table
     printf("mount root\n"); 
     printf("creating P%d as running process\n", running->pid); //print running process
@@ -129,7 +134,8 @@ int main(int argc, char *argv[ ])
         bzero(parameter, sizeof(parameter)); // zero out parameter
 
         green();
-        printf("enter command [cd|ls|pwd|mkdir|creat|rmdir|link|unlink|symlink|chmod|open|close|dup|dup2|pfd|cat |exit] : "); // prompt the user to enter a command
+        printf("enter command [cd|ls|pwd|mkdir|creat|rmdir|link|unlink|symlink|chmod|"
+        "open|close|dup|dup2|pfd|cat|cp|mv|head|tail |exit] : "); // prompt the user to enter a command
         fgets(line, 128, stdin); // read a line from the user
         line[strlen(line)-1] = 0;    // remove the newline character from the end of the line
         white();

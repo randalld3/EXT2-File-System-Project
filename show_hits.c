@@ -11,6 +11,8 @@ extern MINODE *root; // Pointer to root directory inode
 extern int  dev;
 extern int  requests, hits; // Variables for caching information
 
+/**************** show_hits.c file **************/
+
 int show_dir(MINODE *mip)  // show contents of mip DIR: same as in LAB5
 {
     char sbuf[BLKSIZE], temp[256];

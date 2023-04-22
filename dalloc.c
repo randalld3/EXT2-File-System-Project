@@ -1,31 +1,17 @@
 // dalloc.c
 #include "type.h"
 /*********** globals in main.c ***********/
-extern PROC   proc[NPROC];   // process table
-extern PROC   *running;     // pointer to the currently running process
 
 extern MINODE minode[NMINODE];   // In-memory Inodes structure array
-extern MINODE *freeList;         // List of free inodes
-extern MINODE *cacheList;        // List of inodes that are currently in use
-
-extern MINODE *root; // Pointer to root directory inode
-
-extern OFT    oft[NOFT]; // Open File Table
-
-extern char gline[256];   // global line hold token strings of pathname
-extern char *name[64];    // token string pointers
-extern int  n;            // number of token strings                    
 
 // Variables for holding file system metadata
 extern int ninodes, nblocks;
-extern int bmap, imap, inode_start, iblk;  // bitmap, inodes block numbers
+extern int bmap, imap;  // bitmap, inodes block numbers
 
 // Variables for file descriptor and command processing
-extern int  fd, dev;
-extern char cmd[16], pathname[128], parameter[128];
-extern int  requests, hits; // Variables for caching information
+extern int  dev;
 
-
+/**************** dalloc.c file **************/
 
 int idalloc(int dev, int ino)  // deallocate an ino number
 {

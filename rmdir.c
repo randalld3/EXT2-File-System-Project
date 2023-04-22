@@ -1,30 +1,15 @@
 //rmdir.c
 #include "type.h"
 /*********** globals in main.c ***********/
-extern PROC   proc[NPROC];   // process table
 extern PROC   *running;     // pointer to the currently running process
 
-extern MINODE minode[NMINODE];   // In-memory Inodes structure array
-extern MINODE *freeList;         // List of free inodes
-extern MINODE *cacheList;        // List of inodes that are currently in use
-
-extern MINODE *root, *reccwd; // Pointer to root directory inode
-
-extern OFT    oft[NOFT]; // Open File Table
-
-extern char gline[256];   // global line hold token strings of pathname
-extern char *name[64];    // token string pointers
-extern int  n;            // number of token strings                    
-
-// Variables for holding file system metadata
-extern int ninodes, nblocks;
-extern int bmap, imap, inode_start, iblk;  // bitmap, inodes block numbers
+extern MINODE *root, *reccwd; // Pointer to root directory inode         
 
 // Variables for file descriptor and command processing
-extern int  fd, dev;
-extern char cmd[16], pathname[128], parameter[128], absPath[128];
-extern int  requests, hits; // Variables for caching information
+extern int  dev;
+extern char pathname[128], parameter[128], absPath[128];
 
+/**************** rmdir.c file **************/
 
 int rmdir()
 {
@@ -35,7 +20,9 @@ int rmdir()
     char child[128];
 
     if (!pathname[0]){ // need dir to remove
+        red();
         printf("error : no pathname specified\n");
+        white();
         return -1;
     }
 
@@ -52,16 +39,22 @@ int rmdir()
     mip = path2inode(pathname); 
 
     if (!mip){ // dir must exist
+        red();
         printf("error : ino at %s not found\n", pathname);
+        white();
         return -1;
     }
     if (!S_ISDIR(mip->INODE.i_mode)){ // must remove only dir
+        red();
         printf("cannot rmdir : %s is not dir\n", pathname);
+        white();
         iput(mip);
         return -1;
     }
     if (mip->shareCount > 1){ // cannot remove dir with users in it
+        red();
         printf("cannot rmdir : %s is busy\n", pathname);
+        white();
         iput(mip);
         return -1;
     }
@@ -73,7 +66,9 @@ int rmdir()
     dp = (DIR *)cp;
     cp += dp->rec_len;
     if (cp < buf + BLKSIZE){ // only remove empty directory, there should not be any more entries
+        red();
         printf("cannot rmdir : %s is not empty\n", pathname);
+        white();
         iput(mip);
         return -1;
     }
@@ -114,7 +109,7 @@ int rm_child(MINODE *parent, char *name)
             temp[dp->name_len] = 0; // append null character
 
             if (strcmp(temp, name)==0){ // we found the file we're looking for
-                if (prev){ // first entry
+                if (prev){ // last entry
                     dp->inode = 0;
                     prev->rec_len += dp->rec_len;
                     put_block(dev, parent->INODE.i_block[i], buf);

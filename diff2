@@ -1,0 +1,9 @@
+sudo mount diskimage /mnt
+
+echo diff large with newlarge
+sudo diff /mnt/large  /mnt/newlarge
+
+echo diff huge  with newhuge
+sudo diff /mnt/huge   /mnt/newhuge
+
+sudo umount /mnt

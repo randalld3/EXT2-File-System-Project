@@ -5,6 +5,7 @@
 // Variables for file descriptor and command processing
 extern char pathname[128], parameter[128];
 
+/**************** chmod_stat.c file **************/
 
 int do_chmod()
 {

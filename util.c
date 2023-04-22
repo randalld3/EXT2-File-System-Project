@@ -1,7 +1,6 @@
 // util.c
 #include "type.h"
 /*********** globals in main.c ***********/
-extern PROC   proc[NPROC];   // process table
 extern PROC   *running;     // pointer to the currently running process
 
 extern MINODE minode[NMINODE];   // In-memory Inodes structure array
@@ -10,20 +9,17 @@ extern MINODE *cacheList;        // List of inodes that are currently in use
 
 extern MINODE *root; // Pointer to root directory inode
 
-extern OFT    oft[NOFT]; // Open File Table
-
 extern char gline[256];   // global line hold token strings of pathname
 extern char *name[64];    // token string pointers
 extern int  n;            // number of token strings                    
 
 // Variables for holding file system metadata
-extern int ninodes, nblocks;
+extern int ipb, ifactor;
 extern int bmap, imap, inode_start, iblk;  // bitmap, inodes block numbers
 
 // Variables for file descriptor and command processing
-extern int  fd, dev;
+extern int  dev;
 extern char cmd[16], pathname[128], parameter[128], absPath[128];
-extern int  requests, hits; // Variables for caching information
 
 /**************** util.c file **************/
 
@@ -137,11 +133,10 @@ MINODE *iget(int dev, int ino) // return minode pointer of (dev, ino)
         mip->cacheCount = mip->shareCount = 1; mip->modified = 0;
         mip->dev = dev; mip->ino = ino; // assign to (dev, ino)
 
-        blk = (ino-1) / 8 + iblk; // disk block containing this inode
-        offset= (ino-1) % 8; // which inode in this block
+        blk = (ino-1) / ipb + iblk; // disk block containing this inode
+        offset= (ino-1) % ipb; // which inode in this block
         get_block(dev, blk, buf);
-
-        ip = (INODE*)buf + offset;
+        ip = (INODE *)buf + (offset*ifactor);
         mip->INODE = *ip;
 
         enqueue(&cacheList, mip); // Add the new minode to the cacheList
@@ -171,12 +166,12 @@ int iput(MINODE *mip)  // release a mip
     if (!mip->modified)        return; // if the minode has not been modified, return
      
     // calculate the block and offset of the minode's inode
-    block = (mip->ino - 1) / 8 + iblk;
-    offset = (mip->ino - 1) % 8;
+    block = (mip->ino - 1) / ipb + iblk;
+    offset = (mip->ino - 1) % ipb;
 
     // get block containing this inode
     get_block(mip->dev, block, buf);
-    ip = (INODE *)buf + offset; // set ip to point to the inode
+    ip = (INODE *)buf + (offset*ifactor); // set ip to point to the inode
 
     *ip = mip->INODE; // copy the minode's INODE to the inode in the block
     put_block(dev, block, buf); // write block back to disk
