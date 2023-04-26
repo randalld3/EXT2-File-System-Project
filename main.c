@@ -75,7 +75,7 @@ int init()
     requests = hits = 0;         // initialize counters for minodes cache hit ratio
 }
 
-char *disk = "diskimage";
+char *disk = "disk2";
 
 int main(int argc, char *argv[ ]) 
 {
@@ -145,8 +145,6 @@ int main(int argc, char *argv[ ])
         sscanf(line, "%s %s %64c", cmd, pathname, parameter); // parse the command, pathname, and parameter from the input line
       
         do_command();
-
-
     }
 }
 

@@ -1,4 +1,4 @@
-sudo mount diskimage /mnt
+sudo mount disk2 /mnt
 
 echo diff large with newlarge
 sudo diff /mnt/large  /mnt/newlarge

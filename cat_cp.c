@@ -3,9 +3,7 @@
 
 /*********** globals in main.c ***********/
 extern PROC   *running;     // pointer to the currently running process
-
 extern MINODE *reccwd; // Pointer for recursive pathname function
-
 extern OFT    oft[NOFT]; // Open File Table          
 
 // Variables for file descriptor and command processing
@@ -18,38 +16,40 @@ extern char pathname[128], parameter[128], absPath[128];
 int mycat(char *filename)
 {
     char mybuf[BLKSIZE], dummy = 0;
-    int n, i;
+    int n, i; // loop control variables
 
-    strcpy(pathname, filename);
-    strcpy(parameter, "0");
-    int fd = open_file();
+    strcpy(pathname, filename); // copy provided filename to global variable pathname
+    strcpy(parameter, "0"); // set param to 0 as a flag
+    int fd = open_file(); // open file, get fd
 
-    if (fd < 0 || fd >= NFD)
-        return -1;
+    if (fd < 0 || fd >= NFD) // check if fd is valid
+        return -1; // if not, exit
 
-    while (n = myread(fd, mybuf, BLKSIZE)){
-        mybuf[n] = 0;
+    while (n = myread(fd, mybuf, BLKSIZE)){ // read data from file into buffer and get num of bytes
+        mybuf[n] = 0; // set last byte in buffer to null term
         i = 0;
 
-        while (mybuf[i]){
-            mybuf[i] == '\n' ? putchar('\n') : putchar(mybuf[i]);
-            i++;
+        while (mybuf[i]){ // loop through buf contents
+            mybuf[i] == '\n' ? putchar('\n') : putchar(mybuf[i]); // print char, or newline if \n found
+            i++; // move to next char in buf
         }
     }
-    putchar('\n');
-    close_file(fd);
+
+    putchar('\n'); // print new file at end
+    close_file(fd); // close file
     return 0;
 }
 
 int mycp()
 {
-    if (strlen(pathname)==0){
+    if (strlen(pathname)==0){ // check if source file path specified
         red();
         printf("error : src not specified\n");
         white();
         return -1;
     }
-    if (strlen(parameter)==0){
+
+    if (strlen(parameter)==0){ // check if destination file path not specified
         red();
         printf("error : dst not specified\n");
         white();
@@ -57,23 +57,22 @@ int mycp()
     }
 
     char dst[128];
-    strcpy(dst, parameter);
-    bzero(parameter, sizeof(parameter));
+    strcpy(dst, parameter); // copy dest file from parameter into dst buffer
+    bzero(parameter, sizeof(parameter)); // clear parameter buffer
 
-    int fd = open_file();
+    int fd = open_file(); // open source file and get file descriptor
     if (fd == -1){
         red();
         printf("error : cannot complete cp\n");
         white();
         return -1;
     }
-    strcpy(pathname, dst);
-    strcpy(parameter, "1");
-    printf("pathname=%s\n", pathname);
-    printf("parameter=%s\n", parameter);
-    int gd = open_file();
-      printf("CP3\n");
-    if (gd == -1){
+
+    strcpy(pathname, dst); // copy destination file path from dst to pathname
+    strcpy(parameter, "1"); // set parameter to 1 as flag
+
+    int gd = open_file(); // open destination file and get file descriptor
+    if (gd == -1){ // file open error
         red();
         printf("error : cannot complete cp\n");
         white();
@@ -82,46 +81,50 @@ int mycp()
 
     int n;
     char buf[BLKSIZE];
-    
-    while (n=myread(fd, buf, BLKSIZE))
-        mywrite(gd, buf, n);
+
+    while (n=myread(fd, buf, BLKSIZE)) // read data from source file into buffer and get num of bytes read
+        mywrite(gd, buf, n); // write data from buffer to destination file
+
+    close_file(fd);
+    close_file(gd);
+    return 0; // return success
 }
 
 int mymv()
 {
-    if (strlen(pathname)==0){
+    if (strlen(pathname)==0){ // check if source path is specified
         red();
         printf("error : src not specified\n");
         white();
         return -1;
     }
-    if (strlen(parameter)==0){
+
+    if (strlen(parameter)==0){ // check if destination path is specified
         red();
         printf("error : dst not specified\n");
         white();
         return -1;
     }
 
-    MINODE *mip = path2inode(pathname);
-    if (!mip){
+    MINODE *mip = path2inode(pathname); // get minode pointer for pathname
+    if (!mip){ // source file doesnt exist
         red();
         printf("error : src does not exist\n");
         white();
         return -1;
     }
 
-    if (running->cwd->dev == mip->dev){
+    if (running->cwd->dev == mip->dev){ // check if source and dest are on same device
         printf("pathname=%s parameter=%s\n", pathname, parameter);
-        link();
+        link(); // create link from source to destination
         printf("pathname=%s parameter=%s\n", pathname, parameter);
-        unlink();
+        unlink(); // unlink source file and directory
     }
     else{
         printf("pathname=%s parameter=%s\n", pathname, parameter);
-        mycp();
+        mycp(); // copy source to destination
         printf("pathname=%s parameter=%s\n", pathname, parameter);
-        unlink();
+        unlink(); // unlink source file and directory
     }
-
-
+    return 0; // return success
 }

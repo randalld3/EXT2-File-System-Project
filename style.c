@@ -70,6 +70,9 @@ int do_command()
     if (strcmp(cmd, "pfd")==0)
         pfd();
 
+    if (strcmp(cmd, "read")==0)
+        read_file();
+
     if (strcmp(cmd, "write")==0)
         write_file();
 
