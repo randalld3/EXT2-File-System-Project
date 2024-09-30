@@ -29,3 +29,9 @@ This repository contains code to implement file operations on an EXT2 File Syste
 * head
 * tail
 * exit
+
+**RUNNING THE PROGRAM**
+You may either run the mkdisk script to create a new disk, or you may use the disk already in this repository for testing functionality of the program.
+
+To run the program, run the mk script
+The script will delete disk2, recreate the disk with sample files from diskimage, remove the previous executable, compile the new executable from main.c, and launch the program.
